@@ -18,7 +18,7 @@ upstream=$(git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null)
 if [ -n "$upstream" ]; then
   new_commits=$(git log --oneline HEAD.."$upstream" 2>/dev/null)
   if [ -n "$new_commits" ]; then
-    echo "$upstream 에 아직 반영하지 않은 커밋이 있다 (사용자 입력일 수 있음 → 리뷰부터):"
+    echo "$upstream 에 로컬에 없는 커밋이 있다 (pull 필요):"
     echo "$new_commits"
   else
     echo "$upstream 의 새 커밋 없음"

@@ -2,7 +2,7 @@
 
 - 목표: 같은 5개 조회를 순차/병렬로 실행해 시간 차이(≈4200ms vs ≈1200ms)를 확인한다.
 - 핵심 개념: `suspend`, `runBlocking`, `coroutineScope`, `async`/`awaitAll`, `delay`가 스레드를 놓아준다는 점
-- Claude가 작성한 환경 코드: `model/Flight.kt`, `util/Log.kt`, Gradle 설정
+- 환경 코드: `model/Flight.kt`, `util/Log.kt`, Gradle 설정
 
 ## 글 구성 (그림 배치)
 
@@ -15,7 +15,7 @@
 | 5 | ④ FakeFlightProvider, `delay` 설명 뒤 | `step01-5-thread-interleave.json` | 스레드 1개로 어떻게 5개가 동시에 기다리나? |
 | 6 | 실험(선택) 섹션 | `step01-6-delay-vs-sleep.json` | `delay` 대신 `Thread.sleep`이면 왜 느려지나? |
 
-## 사용자가 입력한 파일 (제공 코드 원본, 리뷰 기준)
+## 코드 스냅샷 (이 단계에서 설명한 코드)
 
 ### `src/main/kotlin/com/travel/Main.kt`
 

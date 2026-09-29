@@ -5,8 +5,8 @@
 ## 현재 상태
 
 - **단계**: 1 (순차 호출 vs async 병렬 호출)
-- **상태**: 구조도·코드·설명 제공 완료 → 사용자 입력 대기
-- **다음 할 일**: 사용자가 4개 파일을 입력하고 push하면 `docs/steps/step01.md` 기준으로 리뷰
+- **상태**: 블로그 글 설명 완료 → 사용자 이해 확인 대기
+- **다음 할 일**: 사용자가 이해를 확인하면 `docs/steps/step01.md`의 4개 파일을 `src/`에 반영·검증·커밋하고 2단계 글 시작
 
 ## 프로젝트 개요
 
@@ -20,7 +20,7 @@
 | 단계 | 내용 | 주요 코루틴 개념 | 상태 |
 |---|---|---|---|
 | 0 | 진행 방식 합의, 저장소 준비 | - | 완료 |
-| 1 | API 5개 순차 호출 vs 병렬 호출 | `suspend`, `runBlocking`, `coroutineScope`, `async`/`awaitAll` | 입력 대기 |
+| 1 | API 5개 순차 호출 vs 병렬 호출 | `suspend`, `runBlocking`, `coroutineScope`, `async`/`awaitAll` | 이해 확인 대기 |
 | 2 | 응답이 안 오는 API | `withTimeout`/`withTimeoutOrNull`, 협력적 취소 | 예정 |
 | 3 | 하나가 실패하면 전체가 죽는 문제 | 예외 전파, `supervisorScope`, `CoroutineExceptionHandler` | 예정 |
 | 4 | 블로킹 라이브러리(DB 저장) 섞기 | `Dispatchers.IO`, `withContext` | 예정 |
@@ -42,14 +42,14 @@
 - 그림 6장: `docs/diagrams/step01-1-file-map.json` ~ `step01-6-delay-vs-sleep.json` (배치 순서는 `docs/steps/step01.md`)
 - 제공 코드 원본: `docs/steps/step01.md`
 - 1단계 설명을 블로그 글 형식으로 다시 제공했고, 사용자가 이 형식을 확정했다.
-- 사용자 입력 파일: `Main.kt`, `service/PriceComparisonService.kt`, `provider/FlightProvider.kt`, `provider/FakeFlightProvider.kt`
-- Claude 작성 환경 코드: `model/Flight.kt`, `util/Log.kt`
+- 설명 대상 파일: `Main.kt`, `service/PriceComparisonService.kt`, `provider/FlightProvider.kt`, `provider/FakeFlightProvider.kt` (이해 확인 후 반영)
+- 환경 코드(반영 완료): `model/Flight.kt`, `util/Log.kt`
 - Claude 검증 결과: 순차 ≈4239ms, 병렬 ≈1217ms, 최저가 진에어 275,000원
 
 ## 결정 기록
 
 - 사용자는 코드 이해에 집중하고, 환경 설정과 Git은 Claude가 전담한다.
-- 사용자는 로컬 IntelliJ에서 입력하고 `pull` / `commit and push`만 한다.
+- 개발 환경은 클라우드 세션에만 둔다. 사용자는 코드와 그림을 읽고 이해하고, 코드 반영·실행·Git은 Claude가 한다 (2026-09-29 변경).
 - 진행 방식이 바뀌면 `CLAUDE.md`를 즉시 갱신한다 (`CLAUDE.md` 9번).
 - 주제: 1번 "여행 상품 가격 비교 및 가격 알림 서비스" (2026-09-29)
 - 빌드: Kotlin 2.4.20, kotlinx-coroutines 1.11.0, JDK 21 toolchain, Gradle 8.14.3 wrapper
