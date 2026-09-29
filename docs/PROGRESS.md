@@ -20,7 +20,7 @@
 | 단계 | 내용 | 주요 코루틴 개념 | 상태 |
 |---|---|---|---|
 | 0 | 진행 방식 합의, 저장소 준비 | - | 완료 |
-| 1 | API 5개 순차 호출 vs 병렬 호출 | `suspend`, `runBlocking`, `coroutineScope`, `async`/`awaitAll` | 이해 확인 대기 |
+| 1 | API 5개 순차 호출 vs 병렬 호출 | `suspend`, `runBlocking`, `coroutineScope`, `async`/`awaitAll` | 완료 |
 | 2 | 응답이 안 오는 API | `withTimeout`/`withTimeoutOrNull`, 협력적 취소 | 예정 |
 | 3 | 하나가 실패하면 전체가 죽는 문제 | 예외 전파, `supervisorScope`, `CoroutineExceptionHandler` | 예정 |
 | 4 | 블로킹 라이브러리(DB 저장) 섞기 | `Dispatchers.IO`, `withContext` | 예정 |
@@ -42,9 +42,10 @@
 - 그림 6장: `docs/diagrams/step01-1-file-map.json` ~ `step01-6-delay-vs-sleep.json` (배치 순서는 `docs/steps/step01.md`)
 - 제공 코드 원본: `docs/steps/step01.md`
 - 1단계 설명을 블로그 글 형식으로 다시 제공했고, 사용자가 이 형식을 확정했다.
-- 설명 대상 파일: `Main.kt`, `service/PriceComparisonService.kt`, `provider/FlightProvider.kt`, `provider/FakeFlightProvider.kt` (이해 확인 후 반영)
+- 설명 대상 파일: `Main.kt`, `service/PriceComparisonService.kt`, `provider/FlightProvider.kt`, `provider/FakeFlightProvider.kt` (반영 완료)
 - 환경 코드(반영 완료): `model/Flight.kt`, `util/Log.kt`
-- Claude 검증 결과: 순차 ≈4239ms, 병렬 ≈1217ms, 최저가 진에어 275,000원
+- 검증 결과: 순차 ≈4238ms, 병렬 ≈1212ms, 최저가 진에어 275,000원
+- 사용자 이해 확인 후 `src/`에 반영 완료
 
 ## 결정 기록
 
