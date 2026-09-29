@@ -11,8 +11,8 @@
 |---|---|---|---|
 | 1 | `Main.kt` [수정] | 무엇을 비교하는 실험인가? | 완료 |
 | 2 | `service/PriceComparisonService.kt` [수정] | 항공사별 제한 시간을 어떻게 거나? | 완료 |
-| 3 | `provider/FakeFlightProvider.kt` [수정] | 취소는 코루틴 안에 어떤 모습으로 도착하나? | 설명 완료, 이해 확인 대기 |
-| 4 | `provider/HeavyParsingFlightProvider.kt` [신규] | 취소를 확인하지 않는 코드는 어떻게 되나? | 예정 |
+| 3 | `provider/FakeFlightProvider.kt` [수정] | 취소는 코루틴 안에 어떤 모습으로 도착하나? | 완료 |
+| 4 | `provider/HeavyParsingFlightProvider.kt` [신규] | 취소를 확인하지 않는 코드는 어떻게 되나? | 설명 완료, 이해 확인 대기 |
 | 마무리 | 실행 결과 두 개 비교, 실험 | 협력하지 않는 코루틴 하나가 전체에 끼치는 영향 | 예정 |
 
 순서를 고른 이유: 실행 흐름 순서(무대 → 제한을 거는 곳 → 취소를 받는 곳 → 취소를 무시하는 곳)대로 가면 강의 4의 문제가 앞 강의들 위에서 드러난다.
@@ -28,6 +28,8 @@
 | 강의 2 | `async` + `withTimeoutOrNull` 조합 설명 뒤 | `step02-2-2-search-with-timeout-flow.json` | 네 항공사의 결과가 어떻게 모여 `SearchResult`가 되나? |
 | 강의 3 | 흐름 서술 뒤, 값 추적 표 앞 | `step02-3-1-search-two-paths.json` | 같은 `search`가 제주항공과 티웨이에서 각각 어느 길로 가나? |
 | 강의 3 | "왜 다시 던지나" 설명 뒤 | `step02-3-2-swallow-vs-rethrow.json` | `throw e`를 빼서 예외를 삼키면 무엇이 달라지나? |
+| 강의 4 | cooperative = false 흐름 서술 뒤 | `step02-4-1-no-yield-timeline.json` | 양보하지 않는 코루틴 하나가 있으면 스레드와 다른 코루틴은 어떻게 되나? |
+| 강의 4 | cooperative = true 흐름 서술 뒤 | `step02-4-2-yield-timeline.json` | `yield()`를 넣으면 무엇이 달라지나? |
 
 ## 검증 결과 (Claude 실행)
 
@@ -38,6 +40,9 @@
 - `withTimeout`으로 바꾸면 `TimeoutCancellationException`이 `searchWithTimeout` 밖으로 던져져 전체 조회가 실패한다(대한·제주 결과도 잃음). 강의 2에서 비교로 사용.
 - 강의 2부터 문법 카드 적용(`CLAUDE.md` 4-1). 카드 전체는 `docs/COROUTINE_API.md`.
 - 강의 3부터 값 추적 흐름 서술 적용(`CLAUDE.md` 4-0).
+- 강의 4 실험: 취소 표시는 `kotlinx.coroutines.DefaultExecutor` 스레드가 1500ms에 한다(main이 바빠도 정확).
+  `yield()` 대신 `ensureActive()`를 쓰면 에어부산은 1.5초에 멈추지만 대한·제주도 차례를 못 받아 4곳 모두 시간 초과.
+- **마무리에서 고칠 것**: 4곳 모두 시간 초과면 `Main.search`의 `result.quotes.first()`가 `NoSuchElementException`으로 죽는다(ensureActive 실험에서 발견). `firstOrNull()`로 처리한다.
 - 삼키기 실험(강의 3): `throw e`를 빼면 티웨이가 1.7초에 "조회 완료 (30000ms)" 거짓 로그를 찍고 견적을 반환하지만, `withTimeoutOrNull` 결과는 여전히 `null`.
   삼킨 뒤 `delay(10)`을 부르면 즉시 `TimeoutCancellationException`. catch한 `e`의 실제 타입은 `TimeoutCancellationException`.
 

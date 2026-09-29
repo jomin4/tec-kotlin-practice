@@ -21,6 +21,9 @@
 | [`mapNotNull`](#mapnotnull) | Kotlin 표준 라이브러리 | 2단계 강의 2 |
 | [`CancellationException`](#cancellationexception) / [`TimeoutCancellationException`](#timeoutcancellationexception) | 예외 타입 | 2단계 강의 3 |
 | [취소 가능한 suspend 함수](#취소-가능한-suspend-함수) | 개념 | 2단계 강의 3 |
+| [suspend 지점이 없는 코드](#suspend-지점이-없는-코드) | 개념 | 2단계 강의 4 |
+| [`yield`](#yield) | suspend 함수 | 2단계 강의 4 |
+| [`ensureActive` / `isActive`](#ensureactive--isactive) | 취소 확인 함수 / 프로퍼티 | 2단계 강의 4 (비교) |
 
 용어
 - **코루틴 빌더**: 새 코루틴을 만들어 시작시키는 함수(`runBlocking`, `launch`, `async`). 새 디버그 번호(`@coroutine#N`)가 붙는다.
@@ -167,7 +170,10 @@ suspend fun <T> withTimeoutOrNull(timeMillis: Long, block: suspend CoroutineScop
   - 제한을 넘기면: 블록 안의 코드를 **취소**하고(`TimeoutCancellationException`), 그 예외를 스스로 잡아 **`null`을 반환**한다.
 - **반환 타입**: `T?`. 블록이 `FlightQuote`를 돌려주면 결과는 `FlightQuote?`가 된다. `null`은 "시간 초과"라는 뜻이다.
 - **범위**: 취소는 이 스코프 안에만 미친다. 바깥 코루틴과 형제 코루틴은 영향을 받지 않고 계속 실행된다.
+- **타이머를 누가 재나**: `runBlocking` 안에서는 제한 시간 타이머를 main이 아닌 `kotlinx.coroutines.DefaultExecutor` 스레드가 처리한다.
+  그래서 main이 CPU 작업으로 바빠도 1.5초에 **취소 표시**는 정확히 된다(2단계 강의 4 실험으로 확인). 표시된 취소를 코드가 확인하는지는 별개다.
 - **주의**
+  - 블록이 **한 번도 suspend하지 않고** 값을 반환하면, 제한을 넘겼어도 `withTimeoutOrNull`은 그 값을 돌려준다(실험: 3초 파싱한 에어부산 견적이 채택됨).
   - 타임아웃은 취소 신호일 뿐이다. 블록 안 코드가 suspend 지점에서 취소를 확인해야 실제로 멈춘다(2단계 강의 3, 4).
   - 제한 시간이 0 이하면 블록을 실행하지 않고 바로 `null`을 반환한다.
   - 블록이 원래 `null`을 돌려줄 수 있는 타입이면, 결과 `null`이 "시간 초과"인지 "원래 null"인지 구별할 수 없다.
@@ -247,3 +253,41 @@ class TimeoutCancellationException : CancellationException
 - **협력적 취소의 핵심**: 취소는 강제 종료가 아니다. 코드가 이런 suspend 지점에 도달해야 취소가 효과를 낸다.
   suspend 지점 없이 CPU만 쓰는 코드는 취소 신호를 받아도 계속 돈다(2단계 강의 4).
 - **처음 등장**: 2단계 강의 3 (`delay`가 취소되는 모습)
+
+## suspend 지점이 없는 코드
+
+- **뜻**: 반복문이나 계산처럼 suspend 함수를 한 번도 부르지 않고 CPU만 쓰는 코드. 일반 함수(`fun`)는 suspend 함수를 부를 수 없으므로 전부 여기에 해당한다.
+- **스레드**: 끝날 때까지 스레드를 놓지 않는다. 같은 스레드를 쓰는 다른 코루틴은 그동안 실행되지 못한다(깨어날 시간이 돼도 차례를 못 받음).
+- **취소**: 취소 표시가 돼도 확인하는 곳이 없어 끝까지 실행된다. 취소는 "확인하는 코드"가 있어야 효과가 난다(협력적 취소).
+- **해결**: 반복 중간중간 `yield()`(확인 + 양보) 또는 `ensureActive()`/`isActive`(확인만)를 넣는다. 오래 걸리는 CPU 작업을 다른 스레드로 보내는 방법은 4단계.
+- **처음 등장**: 2단계 강의 4 `HeavyParsingFlightProvider.parseChunk`
+
+## `yield`
+
+```kotlin
+suspend fun yield(): Unit
+```
+
+- **종류**: suspend 함수(취소 가능).
+- **하는 일**: 두 가지를 한 번에 한다.
+  1. **취소 확인**: 이 코루틴이 취소된 상태면 `CancellationException`을 던진다.
+  2. **양보**: 이 코루틴을 잠깐 suspend하고 같은 Dispatcher(여기서는 main 스레드) 대기열의 다른 코루틴에게 차례를 준 뒤, 다시 차례가 오면 이어서 실행한다.
+     대기 중인 다른 코루틴이 없으면 거의 곧바로 이어진다.
+- **스레드**: 막지 않는다. 오히려 스레드를 잠깐 내놓는 함수다.
+- **이 코드에서**: 10ms 파싱할 때마다 `yield()`를 불러, 그 사이 제주항공·대한항공이 제때 깨어나 결과를 내고, 1.5초 취소도 10ms 안에 확인된다.
+- **처음 등장**: 2단계 강의 4
+
+## `ensureActive` / `isActive`
+
+```kotlin
+fun CoroutineContext.ensureActive()        // suspend 함수 안에서는 currentCoroutineContext().ensureActive()
+fun CoroutineScope.ensureActive()
+val CoroutineScope.isActive: Boolean
+```
+
+- **`ensureActive()`**: 취소된 상태면 `CancellationException`을 던진다. **suspend하지 않고 스레드도 내놓지 않는다**(확인만).
+- **`isActive`**: 취소되지 않았으면 `true`. 예외 없이 `while (isActive) { }`처럼 조건으로 쓴다.
+- **`yield()`와의 차이 (실험으로 확인)**: 에어부산 루프에 `yield()` 대신 `ensureActive()`를 넣으면, 에어부산은 1.5초에 정확히 멈춘다.
+  하지만 그때까지 main 스레드를 계속 쥐고 있어서 500ms·1000ms에 깨어났어야 할 제주항공·대한항공이 차례를 못 받고 함께 시간 초과로 잘렸다.
+  스레드가 하나뿐인 곳에서는 **확인뿐 아니라 양보도 필요**하므로 `yield()`를 쓴다.
+- **처음 등장**: 2단계 강의 4 (비교)
