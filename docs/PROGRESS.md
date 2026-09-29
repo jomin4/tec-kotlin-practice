@@ -4,20 +4,32 @@
 
 ## 현재 상태
 
-- **단계**: 0 (준비)
-- **상태**: 진행 방식 합의 완료, 주제 후보 제안함 → 사용자 선택 대기
-- **다음 할 일**: 주제 선정 → Gradle 프로젝트 골격 생성(Claude) → 1단계 구조도 작성
+- **단계**: 1 (순차 호출 vs async 병렬 호출)
+- **상태**: 구조도·코드·설명 제공 완료 → 사용자 입력 대기
+- **다음 할 일**: 사용자가 4개 파일을 입력하고 push하면 `docs/steps/step01.md` 기준으로 리뷰
 
 ## 프로젝트 개요
 
-- 주제: (미정)
-- 사용하는 코루틴 개념: (주제 확정 후 작성)
+- 주제: **여행 상품 가격 비교 및 가격 알림 서비스**
+  - 여러 항공사 API(가짜 구현: `delay` + 고정/랜덤 응답)에 가격을 동시에 묻고 최저가를 모은다.
+  - 이후 단계에서 타임아웃, 부분 실패, 블로킹 I/O, 주기적 가격 감시(Flow), 알림, 요청 제한, 테스트로 확장한다.
+- 패키지: `com.travel` (`model`, `util`, `provider`, `service`)
 
 ## 단계 로드맵
 
 | 단계 | 내용 | 주요 코루틴 개념 | 상태 |
 |---|---|---|---|
 | 0 | 진행 방식 합의, 저장소 준비 | - | 완료 |
+| 1 | API 5개 순차 호출 vs 병렬 호출 | `suspend`, `runBlocking`, `coroutineScope`, `async`/`awaitAll` | 입력 대기 |
+| 2 | 응답이 안 오는 API | `withTimeout`/`withTimeoutOrNull`, 협력적 취소 | 예정 |
+| 3 | 하나가 실패하면 전체가 죽는 문제 | 예외 전파, `supervisorScope`, `CoroutineExceptionHandler` | 예정 |
+| 4 | 블로킹 라이브러리(DB 저장) 섞기 | `Dispatchers.IO`, `withContext` | 예정 |
+| 5 | 가격을 주기적으로 감시 | `Flow`, `map`/`filter`/`distinctUntilChanged` | 예정 |
+| 6 | 여러 가격 흐름을 합쳐 현재 최저가 유지 | `combine`, `StateFlow` | 예정 |
+| 7 | 요청이 몰리면 API가 차단 | `Semaphore`, `Channel` | 예정 |
+| 8 | 시간이 걸리는 코드를 빠르게 테스트 | `runTest`, 가상 시간 | 예정 |
+
+로드맵은 진행하면서 조정할 수 있다.
 
 ## 단계별 기록
 
@@ -26,8 +38,19 @@
 - `docs/PROGRESS.md`(이 문서)로 진행 상태를 기록하기 시작했다.
 - SessionStart 훅(`.claude/hooks/session-start.sh`)을 추가해 세션마다 현재 상태를 자동으로 보여주게 했다.
 
+### 1단계: 순차 호출 vs async 병렬 호출
+- 구조도: `docs/diagrams/step01-sequential-vs-async.json`
+- 제공 코드 원본: `docs/steps/step01.md`
+- 사용자 입력 파일: `Main.kt`, `service/PriceComparisonService.kt`, `provider/FlightProvider.kt`, `provider/FakeFlightProvider.kt`
+- Claude 작성 환경 코드: `model/Flight.kt`, `util/Log.kt`
+- Claude 검증 결과: 순차 ≈4239ms, 병렬 ≈1217ms, 최저가 진에어 275,000원
+
 ## 결정 기록
 
 - 사용자는 코드 이해에 집중하고, 환경 설정과 Git은 Claude가 전담한다.
 - 사용자는 로컬 IntelliJ에서 입력하고 `pull` / `commit and push`만 한다.
 - 진행 방식이 바뀌면 `CLAUDE.md`를 즉시 갱신한다 (`CLAUDE.md` 9번).
+- 주제: 1번 "여행 상품 가격 비교 및 가격 알림 서비스" (2026-09-29)
+- 빌드: Kotlin 2.4.20, kotlinx-coroutines 1.11.0, JDK 21 toolchain, Gradle 8.14.3 wrapper
+- 로그에 코루틴 이름을 보이려고 `util/Log.kt`의 `initLogging()`에서 `kotlinx.coroutines.debug`를 켠다.
+- `gradlew run` 출력 한글 깨짐 방지로 `-Dstdout.encoding=UTF-8`을 준다.
