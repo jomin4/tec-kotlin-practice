@@ -4,9 +4,9 @@
 
 ## 현재 상태
 
-- **단계**: 1 (순차 호출 vs async 병렬 호출)
-- **상태**: 블로그 글 설명 완료 → 사용자 이해 확인 대기
-- **다음 할 일**: 사용자가 이해를 확인하면 `docs/steps/step01.md`의 4개 파일을 `src/`에 반영·검증·커밋하고 2단계 글 시작
+- **단계**: 2 (응답이 안 오는 API: 타임아웃과 협력적 취소)
+- **강의**: 강의 1 `Main.kt` 설명 완료 → 이해 확인 대기 (목차: `docs/steps/step02.md`)
+- **다음 할 일**: 사용자가 "다음"이라고 하면 강의 2 `PriceComparisonService.kt`
 
 ## 프로젝트 개요
 
@@ -21,7 +21,7 @@
 |---|---|---|---|
 | 0 | 진행 방식 합의, 저장소 준비 | - | 완료 |
 | 1 | API 5개 순차 호출 vs 병렬 호출 | `suspend`, `runBlocking`, `coroutineScope`, `async`/`awaitAll` | 완료 |
-| 2 | 응답이 안 오는 API | `withTimeout`/`withTimeoutOrNull`, 협력적 취소 | 예정 |
+| 2 | 응답이 안 오는 API | `withTimeoutOrNull`, `CancellationException`, 협력적 취소(`yield`) | 진행 중 (강의 1/4) |
 | 3 | 하나가 실패하면 전체가 죽는 문제 | 예외 전파, `supervisorScope`, `CoroutineExceptionHandler` | 예정 |
 | 4 | 블로킹 라이브러리(DB 저장) 섞기 | `Dispatchers.IO`, `withContext` | 예정 |
 | 5 | 가격을 주기적으로 감시 | `Flow`, `map`/`filter`/`distinctUntilChanged` | 예정 |
@@ -47,6 +47,10 @@
 - 검증 결과: 순차 ≈4238ms, 병렬 ≈1212ms, 최저가 진에어 275,000원
 - 사용자 이해 확인 후 `src/`에 반영 완료
 
+### 2단계: 응답이 안 오는 API: 타임아웃과 협력적 취소
+- 강의 목차, 그림 배치, 코드 스냅샷: `docs/steps/step02.md`
+- 코드는 작업 트리에서 검증 완료. 단계 마무리 확인 후 `src/`에 커밋한다.
+
 ## 결정 기록
 
 - 사용자는 코드 이해에 집중하고, 환경 설정과 Git은 Claude가 전담한다.
@@ -57,3 +61,4 @@
 - 로그에 코루틴 이름을 보이려고 `util/Log.kt`의 `initLogging()`에서 `kotlinx.coroutines.debug`를 켠다.
 - `gradlew run` 출력 한글 깨짐 방지로 `-Dstdout.encoding=UTF-8`을 준다.
 - 설명 형식: 블로그 글처럼 설명 자리마다 작은 그림을 배치한다 (`CLAUDE.md` 5번).
+- 진행 단위: 단계를 파일 단위 강의로 나눠 한 번에 파일 하나씩 설명한다 (`CLAUDE.md` 3번).
