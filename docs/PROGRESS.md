@@ -5,8 +5,8 @@
 ## 현재 상태
 
 - **단계**: 2 (응답이 안 오는 API: 타임아웃과 협력적 취소)
-- **강의**: 강의 1 `Main.kt` 설명 완료 → 이해 확인 대기 (목차: `docs/steps/step02.md`)
-- **다음 할 일**: 사용자가 "다음"이라고 하면 강의 2 `PriceComparisonService.kt`
+- **강의**: 강의 2 `PriceComparisonService.kt` 설명 완료 → 이해 확인 대기 (목차: `docs/steps/step02.md`)
+- **다음 할 일**: 사용자가 "다음"이라고 하면 강의 3 `FakeFlightProvider.kt` (`CancellationException` 문법 카드 포함)
 
 ## 프로젝트 개요
 
@@ -21,7 +21,7 @@
 |---|---|---|---|
 | 0 | 진행 방식 합의, 저장소 준비 | - | 완료 |
 | 1 | API 5개 순차 호출 vs 병렬 호출 | `suspend`, `runBlocking`, `coroutineScope`, `async`/`awaitAll` | 완료 |
-| 2 | 응답이 안 오는 API | `withTimeoutOrNull`, `CancellationException`, 협력적 취소(`yield`) | 진행 중 (강의 1/4) |
+| 2 | 응답이 안 오는 API | `withTimeoutOrNull`, `CancellationException`, 협력적 취소(`yield`) | 진행 중 (강의 2/4) |
 | 3 | 하나가 실패하면 전체가 죽는 문제 | 예외 전파, `supervisorScope`, `CoroutineExceptionHandler` | 예정 |
 | 4 | 블로킹 라이브러리(DB 저장) 섞기 | `Dispatchers.IO`, `withContext` | 예정 |
 | 5 | 가격을 주기적으로 감시 | `Flow`, `map`/`filter`/`distinctUntilChanged` | 예정 |
@@ -62,3 +62,4 @@
 - `gradlew run` 출력 한글 깨짐 방지로 `-Dstdout.encoding=UTF-8`을 준다.
 - 설명 형식: 블로그 글처럼 설명 자리마다 작은 그림을 배치한다 (`CLAUDE.md` 5번).
 - 진행 단위: 단계를 파일 단위 강의로 나눠 한 번에 파일 하나씩 설명한다 (`CLAUDE.md` 3번).
+- 설명 깊이: 코루틴 API와 관련 Kotlin 문법은 문법 카드로 철저히 설명하고 `docs/COROUTINE_API.md`에 누적한다 (`CLAUDE.md` 4-1).
