@@ -39,8 +39,9 @@
 - SessionStart 훅(`.claude/hooks/session-start.sh`)을 추가해 세션마다 현재 상태를 자동으로 보여주게 했다.
 
 ### 1단계: 순차 호출 vs async 병렬 호출
-- 구조도: `docs/diagrams/step01-sequential-vs-async.json`
+- 그림 6장: `docs/diagrams/step01-1-file-map.json` ~ `step01-6-delay-vs-sleep.json` (배치 순서는 `docs/steps/step01.md`)
 - 제공 코드 원본: `docs/steps/step01.md`
+- 1단계 설명을 블로그 글 형식으로 다시 제공했고, 사용자가 이 형식을 확정했다.
 - 사용자 입력 파일: `Main.kt`, `service/PriceComparisonService.kt`, `provider/FlightProvider.kt`, `provider/FakeFlightProvider.kt`
 - Claude 작성 환경 코드: `model/Flight.kt`, `util/Log.kt`
 - Claude 검증 결과: 순차 ≈4239ms, 병렬 ≈1217ms, 최저가 진에어 275,000원
@@ -54,3 +55,4 @@
 - 빌드: Kotlin 2.4.20, kotlinx-coroutines 1.11.0, JDK 21 toolchain, Gradle 8.14.3 wrapper
 - 로그에 코루틴 이름을 보이려고 `util/Log.kt`의 `initLogging()`에서 `kotlinx.coroutines.debug`를 켠다.
 - `gradlew run` 출력 한글 깨짐 방지로 `-Dstdout.encoding=UTF-8`을 준다.
+- 설명 형식: 블로그 글처럼 설명 자리마다 작은 그림을 배치한다 (`CLAUDE.md` 5번).

@@ -1,9 +1,19 @@
 # 1단계: 순차 호출 vs async 병렬 호출
 
-- 구조도: `docs/diagrams/step01-sequential-vs-async.json`
 - 목표: 같은 5개 조회를 순차/병렬로 실행해 시간 차이(≈4200ms vs ≈1200ms)를 확인한다.
 - 핵심 개념: `suspend`, `runBlocking`, `coroutineScope`, `async`/`awaitAll`, `delay`가 스레드를 놓아준다는 점
 - Claude가 작성한 환경 코드: `model/Flight.kt`, `util/Log.kt`, Gradle 설정
+
+## 글 구성 (그림 배치)
+
+| 순서 | 위치 | 그림 파일 (`docs/diagrams/`) | 그림이 답하는 질문 |
+|---|---|---|---|
+| 1 | 도입, 단계 목표 뒤 | `step01-1-file-map.json` | 어떤 파일이 있고 누가 누구를 부르나? |
+| 2 | ① Main.kt, `runBlocking` 설명 직전 | `step01-2-run-blocking.json` | 일반 함수 `main`과 코루틴은 어떻게 이어지나? |
+| 3 | ② Service, 순차 조회 설명 뒤 | `step01-3-sequential.json` | 순차 조회는 왜 시간이 합이 되나? |
+| 4 | ② Service, 병렬 조회 3단계 설명 뒤 | `step01-4-coroutine-tree.json` | `coroutineScope`/`async`/`Deferred`/`awaitAll`의 관계는? |
+| 5 | ④ FakeFlightProvider, `delay` 설명 뒤 | `step01-5-thread-interleave.json` | 스레드 1개로 어떻게 5개가 동시에 기다리나? |
+| 6 | 실험(선택) 섹션 | `step01-6-delay-vs-sleep.json` | `delay` 대신 `Thread.sleep`이면 왜 느려지나? |
 
 ## 사용자가 입력한 파일 (제공 코드 원본, 리뷰 기준)
 
