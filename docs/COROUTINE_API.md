@@ -18,6 +18,9 @@
 | [`delay`](#delay) | suspend 함수 | 1단계 |
 | [`withTimeoutOrNull`](#withtimeoutornull) / [`withTimeout`](#withtimeout) | 스코프 함수 (suspend) | 2단계 강의 2 |
 | [`Pair`, `to`, 구조 분해](#pair-to-구조-분해) | Kotlin 문법 | 2단계 강의 2 |
+| [`mapNotNull`](#mapnotnull) | Kotlin 표준 라이브러리 | 2단계 강의 2 |
+| [`CancellationException`](#cancellationexception) / [`TimeoutCancellationException`](#timeoutcancellationexception) | 예외 타입 | 2단계 강의 3 |
+| [취소 가능한 suspend 함수](#취소-가능한-suspend-함수) | 개념 | 2단계 강의 3 |
 
 용어
 - **코루틴 빌더**: 새 코루틴을 만들어 시작시키는 함수(`runBlocking`, `launch`, `async`). 새 디버그 번호(`@coroutine#N`)가 붙는다.
@@ -147,7 +150,8 @@ suspend fun delay(duration: Duration)
 - **하는 일**: 지정한 시간만큼 **이 코루틴만** 멈춘다. 스레드는 돌려주므로 그동안 다른 코루틴이 같은 스레드에서 실행된다.
   시간이 지나면 다음 줄부터 이어서 실행한다.
 - **`Thread.sleep`과의 차이**: `Thread.sleep`은 스레드를 붙잡고 잔다. 같은 스레드의 다른 코루틴은 그동안 실행되지 못한다.
-- **취소**: 기다리는 도중 코루틴이 취소되면 `CancellationException`을 던지며 즉시 깨어난다(2단계 강의 3).
+- **취소**: 취소 가능한 suspend 함수다. 기다리는 도중 코루틴이 취소되면 원래 깨어날 시간을 기다리지 않고 즉시 깨어나
+  `CancellationException`을 던진다(2단계 강의 3: 30000ms를 기다리던 티웨이가 1500ms에 예외로 깨어남).
 - **처음 등장**: 1단계 `FakeFlightProvider.search`
 
 ## `withTimeoutOrNull`
@@ -192,3 +196,54 @@ data class Pair<out A, out B>(val first: A, val second: B)
 - **구조 분해**: `val (name, quote) = pair`는 `pair.first`, `pair.second`를 한 번에 꺼낸다(`component1()`, `component2()`).
   람다 파라미터에도 쓸 수 있다: `answers.map { (name, _) -> name }`. 안 쓰는 칸은 `_`로 둔다.
 - **처음 등장**: 2단계 강의 2 `searchWithTimeout`
+
+## `mapNotNull`
+
+```kotlin
+inline fun <T, R : Any> Iterable<T>.mapNotNull(transform: (T) -> R?): List<R>
+```
+
+- **하는 일**: 각 원소를 변환하면서 결과가 `null`인 것은 버린다.
+- **타입 변화**: 변환 결과가 `FlightQuote?`여도 반환은 `List<FlightQuote>`(non-null)다(`R : Any` 제약).
+- **처음 등장**: 2단계 강의 2 `searchWithTimeout`
+
+## `CancellationException`
+
+```kotlin
+// kotlinx.coroutines (JVM)
+typealias CancellationException = java.util.concurrent.CancellationException
+// 상속: CancellationException → IllegalStateException → RuntimeException → Exception
+```
+
+- **종류**: 예외 타입. 코루틴에서는 **"이 코루틴은 취소되었다"는 신호**로 쓰인다. 실패가 아니다.
+- **어디서 던져지나**: 코루틴이 취소된 상태에서 **취소 가능한 suspend 함수**(`delay`, `await`, `yield`, `withContext` 등)를 부르거나,
+  그 함수 안에서 기다리는 중에 취소되면 그 자리에서 던져진다.
+- **실패와의 차이**: 취소된 자식은 `CancellationException`으로 끝나도 부모를 실패시키지 않는다(3단계에서 일반 예외와 비교).
+- **잡았다면 다시 던진다**: 로그나 정리 작업을 위해 `catch`해도 되지만 **반드시 `throw e`로 다시 던진다**. 삼키면:
+  - 취소된 코루틴이 멈추지 않고 다음 줄을 계속 실행한다(실험: 티웨이가 1.7초에 "조회 완료 (30000ms)"라는 거짓 로그를 찍었다).
+  - 그 코루틴에서 다음 suspend 함수를 부르면 곧바로 같은 예외가 다시 던져진다(실험: 삼킨 뒤 `delay(10)`이 즉시 `TimeoutCancellationException`).
+  - 블록이 반환한 값은 버려지고 `withTimeoutOrNull`은 여전히 `null`을 돌려준다(실험으로 확인).
+- **흔한 실수**: `catch (e: Exception)`이나 `runCatching { }`은 `CancellationException`도 함께 잡는다(`Exception`의 하위 타입이므로).
+  이렇게 넓게 잡을 때는 `CancellationException`을 먼저 다시 던지도록 따로 처리해야 한다(3단계).
+- **정리 작업 위치**: 취소돼도 꼭 해야 하는 정리는 보통 `finally`에 둔다. 이 프로젝트는 취소 시점을 로그로 보려고 `catch`를 썼다.
+- **처음 등장**: 2단계 강의 3 `FakeFlightProvider.search`
+
+## `TimeoutCancellationException`
+
+```kotlin
+class TimeoutCancellationException : CancellationException
+```
+
+- **뜻**: `withTimeout`/`withTimeoutOrNull`의 제한 시간이 지나 취소될 때 쓰이는 원인 예외. `CancellationException`의 하위 타입이다.
+- **흐름**: 제한 시간이 지나면 블록 안 코루틴이 이 예외로 취소된다 → 블록 안의 suspend 지점(`delay`)에서 이 예외가 던져진다 →
+  블록 밖으로 올라온 예외를 `withTimeoutOrNull`은 잡아서 `null`로 바꾸고, `withTimeout`은 그대로 밖으로 던진다.
+- **확인한 사실**: `FakeFlightProvider`의 `catch (e: CancellationException)`에서 `e::class.simpleName`을 찍으면 `TimeoutCancellationException`이 나온다.
+- **처음 등장**: 2단계 강의 3
+
+## 취소 가능한 suspend 함수
+
+- **뜻**: 기다리는 도중에 코루틴이 취소되면 기다림을 멈추고 `CancellationException`을 던지는 suspend 함수.
+  `kotlinx.coroutines`의 suspend 함수(`delay`, `await`, `awaitAll`, `yield`, `withContext`, `withTimeout` 등)는 모두 이렇다.
+- **협력적 취소의 핵심**: 취소는 강제 종료가 아니다. 코드가 이런 suspend 지점에 도달해야 취소가 효과를 낸다.
+  suspend 지점 없이 CPU만 쓰는 코드는 취소 신호를 받아도 계속 돈다(2단계 강의 4).
+- **처음 등장**: 2단계 강의 3 (`delay`가 취소되는 모습)
