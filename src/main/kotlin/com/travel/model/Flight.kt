@@ -14,4 +14,15 @@ data class FlightQuote(
 data class SearchResult(
     val quotes: List<FlightQuote>,
     val timedOut: List<String>,
+    val failed: List<String> = emptyList(),
 )
+
+sealed interface ProviderAnswer {
+    val provider: String
+
+    data class Success(override val provider: String, val quote: FlightQuote) : ProviderAnswer
+    data class TimedOut(override val provider: String) : ProviderAnswer
+    data class Failed(override val provider: String, val reason: String) : ProviderAnswer
+}
+
+class ProviderException(message: String) : Exception(message)
