@@ -1,16 +1,17 @@
 package com.travel
 
-import com.travel.model.ProviderException
 import com.travel.model.SearchRequest
-import com.travel.model.SearchResult
 import com.travel.provider.FakeFlightProvider
 import com.travel.provider.FlakyFlightProvider
+import com.travel.repository.SearchHistoryRepository
 import com.travel.service.PriceComparisonService
+import com.travel.service.SearchHistoryRecorder
 import com.travel.util.initLogging
 import com.travel.util.log
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlin.time.Duration.Companion.milliseconds
-import kotlin.time.measureTimedValue
 
 private val TIMEOUT = 1_500.milliseconds
 
@@ -25,22 +26,35 @@ fun main() {
             FlakyFlightProvider("진에어", failAfterMs = 300),
         ),
     )
+    val repository = SearchHistoryRepository(brokenLabels = setOf("저장 C"))
+    val recorder = SearchHistoryRecorder(repository)
 
     runBlocking {
-        search("coroutineScope 조회") { service.searchWithTimeout(request, TIMEOUT) }
-        search("supervisorScope 조회") { service.searchResilient(request, TIMEOUT) }
-    }
-}
+        val result = service.searchResilient(request, TIMEOUT)
+        log("===== 조회 끝: 최저가 ${result.quotes.firstOrNull()?.provider ?: "없음"} =====")
 
-private suspend fun search(label: String, block: suspend () -> SearchResult) {
-    log("===== $label: 시작 =====")
-    try {
-        val (result, elapsed) = measureTimedValue { block() }
-        val cheapest = result.quotes.firstOrNull()
-            ?.let { "${it.provider} ${"%,d".format(it.price)}원" }
-            ?: "없음"
-        log("===== $label: ${elapsed.inWholeMilliseconds}ms / 최저가 $cheapest / 시간 초과 ${result.timedOut} / 실패 ${result.failed} =====")
-    } catch (e: ProviderException) {
-        log("===== $label: 조회 전체 실패 (${e.message}) =====")
+        val screen = launch {
+            var frame = 0
+            while (true) {
+                log("화면 갱신 ${++frame}")
+                delay(200)
+            }
+        }
+        delay(300)
+
+        log("===== 1) main 스레드에서 직접 저장 =====")
+        repository.save("저장 A", result)
+
+        log("===== 2) withContext(Dispatchers.IO)로 저장 =====")
+        recorder.save("저장 B", result)
+
+        log("===== 3) launch로 맡기고 바로 다음 일 =====")
+        recorder.saveInBackground("저장 C", result)
+        recorder.saveInBackground("저장 D", result)
+        log("저장을 맡겼으니 바로 다음 작업 진행")
+
+        recorder.joinPending()
+        log("===== 백그라운드 저장 모두 끝 =====")
+        screen.cancel()
     }
 }

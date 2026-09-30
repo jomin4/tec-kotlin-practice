@@ -23,7 +23,7 @@
 | 1 | API 5개 순차 호출 vs 병렬 호출 | `suspend`, `runBlocking`, `coroutineScope`, `async`/`awaitAll` | 완료 |
 | 2 | 응답이 안 오는 API | `withTimeoutOrNull`, `CancellationException`, 협력적 취소(`yield`) | 완료 |
 | 3 | 하나가 실패하면 전체가 죽는 문제 | 예외 전파, `supervisorScope`, `await` 예외 처리 | 완료 |
-| 4 | 블로킹 라이브러리(DB 저장) 섞기 | `Dispatchers.IO`, `withContext`, `launch`, `CoroutineExceptionHandler` | 진행 중 (강의 3/3) |
+| 4 | 블로킹 라이브러리(DB 저장) 섞기 | `Dispatchers.IO`, `withContext`, `launch`, `CoroutineExceptionHandler` | 완료 |
 | 5 | 가격을 주기적으로 감시 | `Flow`, `map`/`filter`/`distinctUntilChanged` | 예정 |
 | 6 | 여러 가격 흐름을 합쳐 현재 최저가 유지 | `combine`, `StateFlow` | 예정 |
 | 7 | 요청이 몰리면 API가 차단 | `Semaphore`, `Channel` | 예정 |
@@ -60,7 +60,8 @@
 
 ### 4단계: 블로킹 라이브러리(DB 저장) 섞기
 - 강의 목차, 그림 배치, 코드 스냅샷, 실험 결과: `docs/steps/step04.md`
-- 코드는 작업 트리에서 검증 완료. 단계 마무리 확인 후 `src/`에 커밋한다.
+- 검증 결과: ① 직접 저장 시 화면 갱신 약 900ms 멈춤 / ② withContext(IO) 저장 중 화면 계속 / ③ launch 저장 C 실패는 핸들러가 처리, D 정상
+- `src/`에 반영 완료
 
 ## 결정 기록
 
