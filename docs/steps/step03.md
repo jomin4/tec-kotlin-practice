@@ -33,6 +33,32 @@
 - 실험 A: `supervisorScope` 안에서도 `awaitAll()`을 쓰면 첫 실패에서 예외가 블록 밖으로 나가 전체 실패(형제 취소).
 - 실험 B: `coroutineScope` 안에서 `await()`마다 `try/catch`를 해도 못 막는다. 자식이 실패하는 순간 부모 스코프가 취소되어 형제가 먼저 취소되고, catch는 실행되지 않은 채 전체 실패.
 
+## 코드 읽는 순서 예시 (모범 예시)
+
+사용자가 원한 설명 순서: 선언부 → 매개변수 실제 값 → 스코프 진입 → 본문(람다는 풀어서). `CLAUDE.md` 4-0-1.
+
+```kotlin
+suspend fun searchWithTimeout(request: SearchRequest, timeout: Duration): SearchResult = coroutineScope {
+    val answers = providers
+        .map { provider ->
+            async { provider.name to withTimeoutOrNull(timeout) { provider.search(request) } }
+        }
+        .awaitAll()
+    ...
+}
+```
+
+① 선언부: `suspend`(안에서 `coroutineScope`·`awaitAll` 같은 suspend 함수를 부르므로 필요, 코루틴 안에서만 호출 가능),
+`searchWithTimeout`(모든 항공사에 동시에 묻되 항공사마다 제한 시간을 걸어 결과를 모으는 역할), 반환 `SearchResult`.
+② 매개변수 값: `Main`의 `service.searchWithTimeout(request, TIMEOUT)` → `request` = `SearchRequest("ICN", "NRT", "2026-10-15")`,
+`timeout` = 1.5초. 프로퍼티 `providers` = [대한항공, 제주항공, 티웨이, 진에어].
+③ `= coroutineScope {` 진입: 블록 마지막 식이 반환값, 호출한 #1 아래 자식 스코프 생성, 블록 안 `this`가 스코프라 `async` 가능,
+자식이 모두 끝나야 빠져나오고 자식 하나가 실패하면 영역 전체가 취소된다.
+④ `providers.map { provider -> }`: 항공사 4개를 하나씩 꺼내 `provider`에 담아 람다 실행(4번). 1회차 대한항공 → `async` #2 생성,
+`Deferred` 즉시 반환 → 2~4회차 #3~#5. 결과 `List<Deferred<Pair<String, FlightQuote?>>>`.
+⑤ 각 `async` 안(안쪽부터): `provider.search(request)` → `withTimeoutOrNull(1.5초)`로 감쌈 → `provider.name to 결과`.
+⑥ `.awaitAll()`: #1 suspend. 정상이면 넣은 순서대로 `answers`. 3단계에서는 300ms 진에어 실패 → 영역 전체 취소 → 예외가 밖으로.
+
 ## 코드 스냅샷
 
 ### `src/main/kotlin/com/travel/Main.kt`
