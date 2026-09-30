@@ -5,8 +5,8 @@
 ## 현재 상태
 
 - **단계**: 3 (하나가 실패하면 전체가 죽는 문제: 예외 전파와 supervisorScope)
-- **강의**: 강의 2 `FlakyFlightProvider.kt` 설명 완료 → 이해 확인 대기 (목차: `docs/steps/step03.md`)
-- **다음 할 일**: 사용자가 "다음"이라고 하면 강의 3 `PriceComparisonService.kt` (예외 전파, `supervisorScope`)
+- **강의**: 강의 3 `PriceComparisonService.kt` 설명 완료 → 이해 확인 대기 (목차: `docs/steps/step03.md`)
+- **다음 할 일**: 사용자가 "다음"이라고 하면 3단계 마무리 글(실행 결과, 실험 정리) → 확인 후 반영
 
 ## 프로젝트 개요
 
@@ -22,7 +22,7 @@
 | 0 | 진행 방식 합의, 저장소 준비 | - | 완료 |
 | 1 | API 5개 순차 호출 vs 병렬 호출 | `suspend`, `runBlocking`, `coroutineScope`, `async`/`awaitAll` | 완료 |
 | 2 | 응답이 안 오는 API | `withTimeoutOrNull`, `CancellationException`, 협력적 취소(`yield`) | 완료 |
-| 3 | 하나가 실패하면 전체가 죽는 문제 | 예외 전파, `supervisorScope`, `await` 예외 처리 | 진행 중 (강의 2/3) |
+| 3 | 하나가 실패하면 전체가 죽는 문제 | 예외 전파, `supervisorScope`, `await` 예외 처리 | 진행 중 (강의 3/3) |
 | 4 | 블로킹 라이브러리(DB 저장) 섞기 | `Dispatchers.IO`, `withContext`, `launch`, `CoroutineExceptionHandler` | 예정 |
 | 5 | 가격을 주기적으로 감시 | `Flow`, `map`/`filter`/`distinctUntilChanged` | 예정 |
 | 6 | 여러 가격 흐름을 합쳐 현재 최저가 유지 | `combine`, `StateFlow` | 예정 |

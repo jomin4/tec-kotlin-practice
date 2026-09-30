@@ -24,6 +24,10 @@
 | [suspend 지점이 없는 코드](#suspend-지점이-없는-코드) | 개념 | 2단계 강의 4 |
 | [`yield`](#yield) | suspend 함수 | 2단계 강의 4 |
 | [`ensureActive` / `isActive`](#ensureactive--isactive) | 취소 확인 함수 / 프로퍼티 | 2단계 강의 4 (비교) |
+| [취소 vs 실패, 예외 전파 규칙](#취소-vs-실패-예외-전파-규칙) | 개념 | 3단계 강의 2~3 |
+| [`supervisorScope`](#supervisorscope) | 스코프 함수 (suspend) | 3단계 강의 3 |
+| [`await()`의 예외 규칙](#await의-예외-규칙) | 동작 규칙 | 3단계 강의 3 |
+| [`sealed interface`, `filterIsInstance`](#sealed-interface-filterisinstance) | Kotlin 문법 | 3단계 강의 3 |
 
 용어
 - **코루틴 빌더**: 새 코루틴을 만들어 시작시키는 함수(`runBlocking`, `launch`, `async`). 새 디버그 번호(`@coroutine#N`)가 붙는다.
@@ -291,3 +295,56 @@ val CoroutineScope.isActive: Boolean
   하지만 그때까지 main 스레드를 계속 쥐고 있어서 500ms·1000ms에 깨어났어야 할 제주항공·대한항공이 차례를 못 받고 함께 시간 초과로 잘렸다.
   스레드가 하나뿐인 곳에서는 **확인뿐 아니라 양보도 필요**하므로 `yield()`를 쓴다.
 - **처음 등장**: 2단계 강의 4 (비교)
+
+## 취소 vs 실패, 예외 전파 규칙
+
+- **취소**: 코루틴이 `CancellationException` 계열로 끝남. 부모에게 실패로 알리지 않는다(2단계 티웨이).
+- **실패**: 그 밖의 예외로 끝남(3단계 진에어의 `ProviderException`). 부모에게 알린다.
+- **`coroutineScope`(일반 Job)의 규칙**: 자식 하나가 실패하면 ① 부모 스코프가 자기 자신을 취소하고 ② 다른 자식을 모두 취소한 뒤
+  ③ 모든 자식이 끝나면 그 **원래 예외**를 스코프 밖으로 던진다. 실험: 진에어 실패 300ms에 대한·제주·티웨이가 즉시 취소되고
+  `Main`에는 `ProviderException`이 도착했다.
+- **`try/catch`로 막을 수 없다**: `coroutineScope` 안에서 `await()`마다 `try/catch`를 둬도, 자식 실패가 부모를 먼저 취소하므로
+  형제는 이미 취소되고 catch는 실행되지 않은 채 전체가 실패한다(3단계 실험 B).
+- `withTimeoutOrNull`은 자기 타이머의 `TimeoutCancellationException`만 `null`로 바꾸고, 다른 예외는 그대로 통과시킨다.
+- **처음 등장**: 3단계 강의 2(실패 분류), 강의 3(전파 규칙)
+
+## `supervisorScope`
+
+```kotlin
+suspend fun <R> supervisorScope(block: suspend CoroutineScope.() -> R): R
+```
+
+- **종류**: 스코프 함수(suspend). `coroutineScope`와 모양이 같다. 새 코루틴 번호는 없고, 자식 스코프 한 층이 생긴다.
+- **다른 점**: 자식이 실패해도 **부모 스코프와 형제를 취소하지 않는다.** 실패는 그 자식에게만 남는다.
+  - `async` 자식의 예외는 그 `Deferred` 안에 보관되었다가 `await()` 때 다시 던져진다.
+  - `launch` 자식의 예외는 `CoroutineExceptionHandler`로 간다(4단계).
+- **블록 자신이 던지면**: 블록 코드(예: `awaitAll()`, `await()`)에서 예외가 밖으로 나가면 스코프는 자식을 모두 취소하고 그 예외를 던진다.
+  실험 A: `supervisorScope` 안에서 `awaitAll()`을 쓰면 첫 실패 예외가 블록 밖으로 나가 결국 전체 실패.
+  그래서 `await()`를 하나씩 부르고 각각 `try/catch`한다.
+- **반환**: 블록의 마지막 값. 자식이 모두 끝나야 반환한다(구조화된 동시성은 그대로).
+- **처음 등장**: 3단계 강의 3 `searchResilient`
+
+## `await()`의 예외 규칙
+
+```kotlin
+suspend fun await(): T   // Deferred<T>
+```
+
+- 자식이 값으로 끝났으면 그 값을, **예외로 끝났으면 그 예외를 호출한 자리에서 다시 던진다.**
+- 이미 끝난 `Deferred`면 기다리지 않고 즉시 돌려주거나 던진다. 진에어는 300ms에 실패했지만, 4번째로 `await()`한 순간(≈1500ms)에야 `catch`에 도착했다.
+- **처음 등장**: 3단계 강의 3
+
+## `sealed interface`, `filterIsInstance`
+
+```kotlin
+sealed interface ProviderAnswer { val provider: String
+    data class Success(...) : ProviderAnswer
+    data class TimedOut(...) : ProviderAnswer
+    data class Failed(...) : ProviderAnswer
+}
+inline fun <reified R> Iterable<*>.filterIsInstance(): List<R>
+```
+
+- **`sealed interface`**: 구현 타입이 이 파일 안의 것들로 **닫혀 있는** 인터페이스. "결과는 딱 이 세 가지 중 하나"를 타입으로 표현한다.
+- **`filterIsInstance<T>()`**: 리스트에서 `T` 타입인 원소만 골라 `List<T>`로 돌려준다. 그래서 `Success`만 골라 `.quote`에 바로 접근할 수 있다.
+- **처음 등장**: 3단계 강의 3 `searchResilient`
