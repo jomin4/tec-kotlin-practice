@@ -1,59 +1,36 @@
 package com.travel
 
-import com.travel.model.ProviderException
-import com.travel.model.SearchRequest
-import com.travel.provider.FakeFlightProvider
-import com.travel.provider.FlightProvider
-import com.travel.provider.FragileFlightProvider
-import com.travel.provider.RateLimitedFlightProvider
-import com.travel.service.SearchQueue
+import com.travel.demo.step1
+import com.travel.demo.step2
+import com.travel.demo.step3
+import com.travel.demo.step4
+import com.travel.demo.step5
+import com.travel.demo.step6
+import com.travel.demo.step7
 import com.travel.util.initLogging
-import com.travel.util.log
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.runBlocking
-import kotlin.time.measureTimedValue
 
-fun main() {
-    initLogging()
-    val request = SearchRequest(from = "ICN", to = "NRT", date = "2026-10-15")
+private val demos: Map<Int, Pair<String, () -> Unit>> = linkedMapOf(
+    1 to ("순차 호출 vs async 병렬 호출" to ::step1),
+    2 to ("응답이 안 오는 API: 타임아웃과 협력적 취소" to ::step2),
+    3 to ("하나가 실패하면 전체가 죽는 문제: supervisorScope" to ::step3),
+    4 to ("블로킹 DB 저장 섞기: Dispatchers.IO, launch" to ::step4),
+    5 to ("가격을 주기적으로 감시: Flow" to ::step5),
+    6 to ("여러 가격 흐름을 합쳐 현재 최저가 유지: combine, StateFlow" to ::step6),
+    7 to ("요청이 몰리면 API가 차단: Semaphore, Channel" to ::step7),
+)
 
-    runBlocking {
-        log("===== 1) 사용자 6명이 동시에 조회 (제한 없음) =====")
-        val raw = FragileFlightProvider("제주항공", maxConcurrent = 2, latencyMs = 300, price = 289_000)
-        burst(raw, request, users = 6)
-        log("최대 동시 요청: ${raw.peakConcurrent}건")
+fun main(args: Array<String>) {
+    val selected = args.firstOrNull()?.toIntOrNull()
+    val targets = if (selected == null) demos.keys else listOf(selected)
 
-        log("===== 2) Semaphore(2)로 동시 요청 수 제한 =====")
-        val guarded = FragileFlightProvider("제주항공", maxConcurrent = 2, latencyMs = 300, price = 289_000)
-        burst(RateLimitedFlightProvider(guarded, permits = 2), request, users = 6)
-        log("최대 동시 요청: ${guarded.peakConcurrent}건")
-
-        log("===== 3) Channel 대기열 + 작업자 3명 =====")
-        val destinations = listOf("NRT", "KIX", "FUK", "CTS", "OKA", "TPE", "BKK")
-        val queue = SearchQueue(FakeFlightProvider("대한항공", latencyMs = 300, price = 420_000), workerCount = 3)
-        val (results, elapsed) = measureTimedValue {
-            queue.processAll(destinations.map { request.copy(to = it) })
+    for (step in targets) {
+        val (title, demo) = demos[step] ?: run {
+            println("알 수 없는 단계: $step (1~7 중에서 고르세요. 8단계는 ./gradlew test)")
+            return
         }
-        log("===== 처리 완료 ${results.size}건 / ${elapsed.inWholeMilliseconds}ms / 순서 ${results.map { it.first }} =====")
+        println()
+        println("################ $step 단계: $title ################")
+        initLogging()
+        demo()
     }
-}
-
-private suspend fun burst(provider: FlightProvider, request: SearchRequest, users: Int) {
-    val (outcomes, elapsed) = measureTimedValue {
-        coroutineScope {
-            (1..users).map { user ->
-                async {
-                    try {
-                        provider.search(request)
-                        "성공"
-                    } catch (e: ProviderException) {
-                        "실패"
-                    }
-                }
-            }.awaitAll()
-        }
-    }
-    log("결과: ${outcomes.groupingBy { it }.eachCount()} / ${elapsed.inWholeMilliseconds}ms")
 }

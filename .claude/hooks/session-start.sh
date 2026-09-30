@@ -4,7 +4,7 @@ cd "${CLAUDE_PROJECT_DIR:-.}" || exit 0
 
 git fetch -q origin 2>/dev/null
 
-echo "=== [학습 프로젝트] 세션 시작 체크 ==="
+echo "=== [학습 프로젝트] 세션 시작 체크 (8단계 실습 완료, README.md 참고) ==="
 echo "CLAUDE.md의 '7. 세션 시작 루틴'을 따르고, 첫 답변에서 현재 단계와 다음 할 일을 알려준다."
 echo "대화 중 진행 방식이 바뀌면 '9. 진행 방식 변경 규칙'대로 CLAUDE.md를 즉시 갱신한다."
 echo
