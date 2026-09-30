@@ -5,8 +5,8 @@
 ## 현재 상태
 
 - **단계**: 3 (하나가 실패하면 전체가 죽는 문제: 예외 전파와 supervisorScope)
-- **강의**: 강의 1 `Main.kt` 설명 완료 → 이해 확인 대기 (목차: `docs/steps/step03.md`)
-- **다음 할 일**: 사용자가 "다음"이라고 하면 강의 2 `FlakyFlightProvider.kt`
+- **강의**: 강의 2 `FlakyFlightProvider.kt` 설명 완료 → 이해 확인 대기 (목차: `docs/steps/step03.md`)
+- **다음 할 일**: 사용자가 "다음"이라고 하면 강의 3 `PriceComparisonService.kt` (예외 전파, `supervisorScope`)
 
 ## 프로젝트 개요
 
@@ -22,7 +22,7 @@
 | 0 | 진행 방식 합의, 저장소 준비 | - | 완료 |
 | 1 | API 5개 순차 호출 vs 병렬 호출 | `suspend`, `runBlocking`, `coroutineScope`, `async`/`awaitAll` | 완료 |
 | 2 | 응답이 안 오는 API | `withTimeoutOrNull`, `CancellationException`, 협력적 취소(`yield`) | 완료 |
-| 3 | 하나가 실패하면 전체가 죽는 문제 | 예외 전파, `supervisorScope`, `await` 예외 처리 | 진행 중 (강의 1/3) |
+| 3 | 하나가 실패하면 전체가 죽는 문제 | 예외 전파, `supervisorScope`, `await` 예외 처리 | 진행 중 (강의 2/3) |
 | 4 | 블로킹 라이브러리(DB 저장) 섞기 | `Dispatchers.IO`, `withContext`, `launch`, `CoroutineExceptionHandler` | 예정 |
 | 5 | 가격을 주기적으로 감시 | `Flow`, `map`/`filter`/`distinctUntilChanged` | 예정 |
 | 6 | 여러 가격 흐름을 합쳐 현재 최저가 유지 | `combine`, `StateFlow` | 예정 |
@@ -72,3 +72,4 @@
 - 설명 방식: 값 추적 흐름 서술(실제 값·타입·코루틴 상태·시간을 따라 한 동작씩)과 값 추적 표 (`CLAUDE.md` 4-0).
 - 속도 조절: 핵심 코드만 깊게 설명하고 연결부·보일러플레이트는 짧게 넘긴다 (`CLAUDE.md` 4-0-3, 2026-09-30).
 - 로드맵 조정: `CoroutineExceptionHandler`는 `launch`와 함께 4단계에서 다룬다(`async` 예외는 `await`로 받으므로 3단계에는 맞지 않음) (2026-09-30).
+- 강의 글 형식: 파일 전체 코드 → 덩어리별 `코드 박스 → 설명`, 수정 파일은 바뀐 부분만 (`CLAUDE.md` 5-1, 2026-09-30).

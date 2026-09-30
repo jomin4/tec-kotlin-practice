@@ -10,8 +10,8 @@
 
 | 강의 | 파일 | 답할 질문 | 상태 |
 |---|---|---|---|
-| 1 | `Main.kt` [수정] | 무엇을 비교하고, 전체 실패는 어디서 잡나? | 설명 완료, 이해 확인 대기 |
-| 2 | `provider/FlakyFlightProvider.kt` [신규] | 예외는 어디서 태어나 어디로 가나? | 예정 |
+| 1 | `Main.kt` [수정] | 무엇을 비교하고, 전체 실패는 어디서 잡나? | 완료 |
+| 2 | `provider/FlakyFlightProvider.kt` [신규] | 예외는 어디서 태어나 어디로 가나? | 설명 완료, 이해 확인 대기 |
 | 3 | `service/PriceComparisonService.kt` [수정] | 왜 전체가 죽고, `supervisorScope`는 어떻게 살리나? | 예정 |
 | 마무리 | 실행 결과, 실험 | | 예정 |
 
@@ -23,6 +23,7 @@
 |---|---|---|---|
 | 도입 | 문제 설명 뒤 | `step03-0-1-one-failure-kills-all.json` | 진에어 하나가 실패하면 어떻게 되나, 목표는? |
 | 도입 | 목차 앞 | `step03-0-2-file-map.json` | 이번 단계 파일과 강의 번호는? |
+| 강의 2 | `throw` 흐름 서술 뒤 | `step03-2-1-exception-path.json` | 진에어의 예외는 어디서 태어나 어디까지 올라가나? |
 
 ## 검증 결과 (Claude 실행)
 
