@@ -4,9 +4,9 @@
 
 ## 현재 상태
 
-- **단계**: 3 (하나가 실패하면 전체가 죽는 문제: 예외 전파와 supervisorScope)
-- **강의**: 3단계 마무리 글 설명 완료 → 반영 확인 대기 (목차: `docs/steps/step03.md`)
-- **다음 할 일**: 사용자가 확인하면 3단계 코드를 `src/`에 커밋하고 4단계 도입 글 + 강의 1 시작
+- **단계**: 4 (블로킹 라이브러리(DB 저장) 섞기)
+- **강의**: 강의 1 `Main.kt` 설명 완료 → 이해 확인 대기 (목차: `docs/steps/step04.md`)
+- **다음 할 일**: 사용자가 "다음"이라고 하면 강의 2 `SearchHistoryRepository.kt`
 
 ## 프로젝트 개요
 
@@ -23,7 +23,7 @@
 | 1 | API 5개 순차 호출 vs 병렬 호출 | `suspend`, `runBlocking`, `coroutineScope`, `async`/`awaitAll` | 완료 |
 | 2 | 응답이 안 오는 API | `withTimeoutOrNull`, `CancellationException`, 협력적 취소(`yield`) | 완료 |
 | 3 | 하나가 실패하면 전체가 죽는 문제 | 예외 전파, `supervisorScope`, `await` 예외 처리 | 완료 |
-| 4 | 블로킹 라이브러리(DB 저장) 섞기 | `Dispatchers.IO`, `withContext`, `launch`, `CoroutineExceptionHandler` | 예정 |
+| 4 | 블로킹 라이브러리(DB 저장) 섞기 | `Dispatchers.IO`, `withContext`, `launch`, `CoroutineExceptionHandler` | 진행 중 (강의 1/3) |
 | 5 | 가격을 주기적으로 감시 | `Flow`, `map`/`filter`/`distinctUntilChanged` | 예정 |
 | 6 | 여러 가격 흐름을 합쳐 현재 최저가 유지 | `combine`, `StateFlow` | 예정 |
 | 7 | 요청이 몰리면 API가 차단 | `Semaphore`, `Channel` | 예정 |
@@ -57,6 +57,10 @@
 - 강의 목차, 그림 배치, 코드 스냅샷, 실험 결과: `docs/steps/step03.md`
 - 검증 결과: coroutineScope 조회 → 약 300ms에 전체 실패 / supervisorScope 조회 → 1515ms, 최저가 제주항공, 시간 초과 [티웨이], 실패 [진에어]
 - 사용자 확인 후 `src/`에 반영 완료
+
+### 4단계: 블로킹 라이브러리(DB 저장) 섞기
+- 강의 목차, 그림 배치, 코드 스냅샷, 실험 결과: `docs/steps/step04.md`
+- 코드는 작업 트리에서 검증 완료. 단계 마무리 확인 후 `src/`에 커밋한다.
 
 ## 결정 기록
 

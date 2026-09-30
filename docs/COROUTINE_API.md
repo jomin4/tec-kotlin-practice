@@ -28,6 +28,7 @@
 | [`supervisorScope`](#supervisorscope) | 스코프 함수 (suspend) | 3단계 강의 3 |
 | [`await()`의 예외 규칙](#await의-예외-규칙) | 동작 규칙 | 3단계 강의 3 |
 | [`sealed interface`, `filterIsInstance`](#sealed-interface-filterisinstance) | Kotlin 문법 | 3단계 강의 3 |
+| [`launch`](#launch) / [`Job`, `cancel()`](#job-cancel) | 코루틴 빌더 / 타입 | 4단계 강의 1 |
 
 용어
 - **코루틴 빌더**: 새 코루틴을 만들어 시작시키는 함수(`runBlocking`, `launch`, `async`). 새 디버그 번호(`@coroutine#N`)가 붙는다.
@@ -348,3 +349,38 @@ inline fun <reified R> Iterable<*>.filterIsInstance(): List<R>
 - **`sealed interface`**: 구현 타입이 이 파일 안의 것들로 **닫혀 있는** 인터페이스. "결과는 딱 이 세 가지 중 하나"를 타입으로 표현한다.
 - **`filterIsInstance<T>()`**: 리스트에서 `T` 타입인 원소만 골라 `List<T>`로 돌려준다. 그래서 `Success`만 골라 `.quote`에 바로 접근할 수 있다.
 - **처음 등장**: 3단계 강의 3 `searchResilient`
+
+## `launch`
+
+```kotlin
+fun CoroutineScope.launch(
+    context: CoroutineContext = EmptyCoroutineContext,
+    start: CoroutineStart = CoroutineStart.DEFAULT,
+    block: suspend CoroutineScope.() -> Unit,
+): Job
+```
+
+- **종류**: 코루틴 빌더, `CoroutineScope`의 확장 함수. suspend 함수가 아니다(기다리지 않고 바로 반환).
+- **하는 일**: 새 자식 코루틴을 만들어 실행 대기열에 넣고, **결과값 없이** `Job`을 즉시 돌려준다. "맡겨 두고 잊는" 작업용.
+- **`async`와의 차이**: `async`는 결과 `T`를 담은 `Deferred<T>`를 주고 `await()`로 받는다. `launch`는 결과가 없고(`Unit`), 예외는
+  `await()`로 받을 곳이 없으므로 부모로 전파되거나(일반 Job) `CoroutineExceptionHandler`로 간다(SupervisorJob 아래 루트 코루틴).
+- **Dispatcher**: `context`를 주지 않으면 부모의 것을 물려받는다. `runBlocking` 안의 `launch`는 main 스레드에서 돈다.
+- **처음 등장**: 4단계 강의 1 (화면 갱신 코루틴), 강의 3 (백그라운드 저장)
+
+## `Job`, `cancel()`
+
+```kotlin
+interface Job : CoroutineContext.Element {
+    fun cancel(cause: CancellationException? = null)
+    suspend fun join()
+    val isActive: Boolean; val isCancelled: Boolean; val isCompleted: Boolean
+    val children: Sequence<Job>
+}
+```
+
+- **뜻**: 코루틴 하나의 "손잡이". 상태 확인, 취소(`cancel()`), 끝날 때까지 기다리기(`join()`)를 한다.
+- **`cancel()`**: 취소 표시만 한다. 코루틴은 다음 suspend 지점(예: `delay`)에서 `CancellationException`을 받아 끝난다(2단계 협력적 취소).
+- **`join()`**: 그 코루틴이 끝날 때까지 suspend한다. 결과값은 없다.
+- **부모는 자식을 기다린다**: `runBlocking`은 블록이 끝나도 자식이 모두 끝나야 반환한다. 무한 반복하는 화면 갱신 코루틴을
+  `cancel()`하지 않으면 프로그램이 끝나지 않는다(4단계 강의 1).
+- **처음 등장**: 4단계 강의 1
