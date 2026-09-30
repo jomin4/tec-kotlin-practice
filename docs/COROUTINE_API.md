@@ -37,6 +37,7 @@
 | [Flow 중간 연산자](#flow-중간-연산자) | `onEach`·`map`·`filter`·`distinctUntilChanged`·`take`·`onCompletion` | 5단계 |
 | [`combine`](#combine) / [`StateFlow`, `stateIn`](#stateflow-statein) | Flow 연산자 / 뜨거운 흐름 | 6단계 |
 | [`Semaphore`, `withPermit`](#semaphore-withpermit) / [`Channel`](#channel) / [`joinAll`](#joinall) | 동기화 / 코루틴 간 통신 | 7단계 |
+| [`runTest`와 가상 시간](#runtest와-가상-시간) | 테스트 | 8단계 |
 
 용어
 - **코루틴 빌더**: 새 코루틴을 만들어 시작시키는 함수(`runBlocking`, `launch`, `async`). 새 디버그 번호(`@coroutine#N`)가 붙는다.
@@ -566,3 +567,22 @@ suspend fun Collection<Job>.joinAll()
 
 - 여러 `Job`이 모두 끝날 때까지 suspend한다. 결과값이 필요 없는 `launch` 작업들을 기다릴 때 쓴다(`awaitAll`의 `Job` 버전).
 - **처음 등장**: 7단계 `SearchQueue`
+
+## `runTest`와 가상 시간
+
+```kotlin
+fun runTest(context: CoroutineContext = EmptyCoroutineContext, timeout: Duration = 60.seconds,
+            testBody: suspend TestScope.() -> Unit): TestResult
+val TestScope.currentTime: Long
+fun TestScope.advanceTimeBy(delayTime: Long)
+fun TestScope.runCurrent()
+val TestScope.backgroundScope: CoroutineScope
+```
+
+- **`runTest`**: 테스트용 코루틴 빌더. 안의 `delay`, `withTimeout(OrNull)` 같은 시간 기다림을 **가상 시계**로 처리해 실제로는 기다리지 않는다.
+  8단계에서 30초 응답 없음 시나리오가 실제 2ms에 끝났다.
+- **`currentTime`**: 가상 시계가 지금 몇 ms인지. "병렬 조회는 1,200ms 걸려야 한다" 같은 **시간 자체**를 검증할 수 있다.
+- **`advanceTimeBy(ms)` + `runCurrent()`**: 가상 시간을 원하는 만큼만 흘리고, 그 시각에 할 일을 실행시킨다. 끝나지 않는 흐름을 중간중간 들여다볼 때 쓴다.
+- **`backgroundScope`**: 테스트가 끝나면 자동으로 취소되는 스코프. `stateIn`처럼 스스로 끝나지 않는 코루틴을 여기에 띄운다.
+- **한계**: `Thread.sleep`(블로킹), 실제 CPU 시간, `Dispatchers.IO`처럼 테스트 스케줄러 밖의 스레드는 가상 시간이 적용되지 않는다. 이런 코드는 Dispatcher를 주입받게 설계해 테스트에서 바꿔 끼운다.
+- **처음 등장**: 8단계 테스트
