@@ -12,8 +12,8 @@
 | 1 | `Main.kt` [수정] | 무엇을 비교하는 실험인가? | 완료 |
 | 2 | `service/PriceComparisonService.kt` [수정] | 항공사별 제한 시간을 어떻게 거나? | 완료 |
 | 3 | `provider/FakeFlightProvider.kt` [수정] | 취소는 코루틴 안에 어떤 모습으로 도착하나? | 완료 |
-| 4 | `provider/HeavyParsingFlightProvider.kt` [신규] | 취소를 확인하지 않는 코드는 어떻게 되나? | 설명 완료, 이해 확인 대기 |
-| 마무리 | 실행 결과 두 개 비교, 실험 | 협력하지 않는 코루틴 하나가 전체에 끼치는 영향 | 예정 |
+| 4 | `provider/HeavyParsingFlightProvider.kt` [신규] | 취소를 확인하지 않는 코드는 어떻게 되나? | 완료 |
+| 마무리 | 실행 결과 두 개 비교, 실험 | 협력하지 않는 코루틴 하나가 전체에 끼치는 영향 | 설명 완료, 반영 확인 대기 |
 
 순서를 고른 이유: 실행 흐름 순서(무대 → 제한을 거는 곳 → 취소를 받는 곳 → 취소를 무시하는 곳)대로 가면 강의 4의 문제가 앞 강의들 위에서 드러난다.
 
@@ -42,7 +42,7 @@
 - 강의 3부터 값 추적 흐름 서술 적용(`CLAUDE.md` 4-0).
 - 강의 4 실험: 취소 표시는 `kotlinx.coroutines.DefaultExecutor` 스레드가 1500ms에 한다(main이 바빠도 정확).
   `yield()` 대신 `ensureActive()`를 쓰면 에어부산은 1.5초에 멈추지만 대한·제주도 차례를 못 받아 4곳 모두 시간 초과.
-- **마무리에서 고칠 것**: 4곳 모두 시간 초과면 `Main.search`의 `result.quotes.first()`가 `NoSuchElementException`으로 죽는다(ensureActive 실험에서 발견). `firstOrNull()`로 처리한다.
+- 마무리에서 고침: 4곳 모두 시간 초과면 `result.quotes.first()`가 `NoSuchElementException`으로 죽던 문제를 `firstOrNull()?.let { } ?: "없음"`으로 수정. 제한 100ms로 확인하니 `최저가 없음` 출력.
 - 삼키기 실험(강의 3): `throw e`를 빼면 티웨이가 1.7초에 "조회 완료 (30000ms)" 거짓 로그를 찍고 견적을 반환하지만, `withTimeoutOrNull` 결과는 여전히 `null`.
   삼킨 뒤 `delay(10)`을 부르면 즉시 `TimeoutCancellationException`. catch한 `e`의 실제 타입은 `TimeoutCancellationException`.
 
@@ -91,8 +91,10 @@ private suspend fun search(label: String, request: SearchRequest, parser: Flight
 
     log("===== $label: 시작 (항공사별 제한 ${TIMEOUT.inWholeMilliseconds}ms) =====")
     val (result, elapsed) = measureTimedValue { service.searchWithTimeout(request, TIMEOUT) }
-    val cheapest = result.quotes.first()
-    log("===== $label: ${elapsed.inWholeMilliseconds}ms / 최저가 ${cheapest.provider} ${"%,d".format(cheapest.price)}원 / 시간 초과 ${result.timedOut} =====")
+    val cheapest = result.quotes.firstOrNull()
+        ?.let { "${it.provider} ${"%,d".format(it.price)}원" }
+        ?: "없음"
+    log("===== $label: ${elapsed.inWholeMilliseconds}ms / 최저가 $cheapest / 시간 초과 ${result.timedOut} =====")
 }
 ```
 
