@@ -12,8 +12,8 @@
 |---|---|---|---|
 | 1 | `Main.kt` [수정] | 무엇을 비교하고, 전체 실패는 어디서 잡나? | 완료 |
 | 2 | `provider/FlakyFlightProvider.kt` [신규] | 예외는 어디서 태어나 어디로 가나? | 완료 |
-| 3 | `service/PriceComparisonService.kt` [수정] | 왜 전체가 죽고, `supervisorScope`는 어떻게 살리나? | 설명 완료, 이해 확인 대기 |
-| 마무리 | 실행 결과, 실험 | | 예정 |
+| 3 | `service/PriceComparisonService.kt` [수정] | 왜 전체가 죽고, `supervisorScope`는 어떻게 살리나? | 완료 |
+| 마무리 | 실행 결과, 실험 | | 설명 완료, 반영 확인 대기 |
 
 순서를 고른 이유: 무대(Main) → 예외가 생기는 곳(Flaky) → 예외가 퍼지고 막히는 곳(Service).
 
