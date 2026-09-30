@@ -30,6 +30,9 @@
 | [`sealed interface`, `filterIsInstance`](#sealed-interface-filterisinstance) | Kotlin 문법 | 3단계 강의 3 |
 | [`launch`](#launch) / [`Job`, `cancel()`](#job-cancel) | 코루틴 빌더 / 타입 | 4단계 강의 1 |
 | [블로킹 함수](#블로킹-함수) | 개념 | 4단계 강의 2 |
+| [`withContext`](#withcontext) / [`Dispatchers.IO`](#dispatchersio) | 스코프 함수 / Dispatcher | 4단계 강의 3 |
+| [`CoroutineContext`와 `+`](#coroutinecontext와-) / [`CoroutineScope(...)`](#coroutinescope-만들기) | 타입 / 함수 | 4단계 강의 3 |
+| [`SupervisorJob`](#supervisorjob) / [`CoroutineExceptionHandler`](#coroutineexceptionhandler) | Job / 컨텍스트 요소 | 4단계 강의 3 |
 
 용어
 - **코루틴 빌더**: 새 코루틴을 만들어 시작시키는 함수(`runBlocking`, `launch`, `async`). 새 디버그 번호(`@coroutine#N`)가 붙는다.
@@ -395,3 +398,69 @@ interface Job : CoroutineContext.Element {
   표시일 뿐 블로킹을 없애 주지 않는다(1단계 `delay` vs `Thread.sleep`). 해결은 **블로킹 호출을 다른 스레드로 옮기는 것**(`withContext(Dispatchers.IO)`).
 - **취소가 안 먹힌다**: 블로킹 중에는 suspend 지점이 없어 코루틴 취소를 확인하지 못한다(2단계 협력적 취소, 4단계 `Job()` 실험에서 저장 D가 취소되지 않고 끝까지 실행됨).
 - **처음 등장**: 4단계 강의 2
+
+## `withContext`
+
+```kotlin
+suspend fun <T> withContext(context: CoroutineContext, block: suspend CoroutineScope.() -> T): T
+```
+
+- **종류**: 스코프 함수(suspend). 새 코루틴 번호는 생기지 않는다. 호출한 코루틴이 `context`(주로 다른 Dispatcher)로 **건너가서** 블록을 실행하고,
+  끝나면 원래 스레드로 **돌아와** 블록의 값을 반환한다.
+- **기다림**: 블록이 끝날 때까지 호출한 코루틴은 suspend한다(결과를 기다림). 하지만 원래 스레드는 붙잡지 않는다.
+- **확인한 사실**: `recorder.save("저장 B")`의 저장 로그 스레드가 `DefaultDispatcher-worker-1 @coroutine#1`. 같은 #1이 IO 스레드에서 실행됐고,
+  그동안 main에서 화면 갱신이 200ms마다 계속 찍혔다.
+- **`launch`와의 차이**: `withContext`는 결과를 기다리고 반환값이 있다. `launch`는 기다리지 않고 `Job`만 준다.
+- **처음 등장**: 4단계 강의 3 `SearchHistoryRecorder.save`
+
+## `Dispatchers.IO`
+
+- **뜻**: 블로킹 I/O(DB, 파일, 네트워크)를 위한 스레드 풀. 스레드 이름은 `DefaultDispatcher-worker-N`(`Dispatchers.Default`와 스레드를 공유).
+  동시에 최대 64개(또는 CPU 코어 수 중 큰 값)까지 스레드를 늘려 쓴다.
+- **다른 Dispatcher**: `Dispatchers.Default`(CPU 계산용, 코어 수만큼), `Dispatchers.Main`(안드로이드 등 UI 스레드), `Dispatchers.Unconfined`(특수).
+  `runBlocking`은 자기 스레드(여기서는 main)를 쓴다.
+- **처음 등장**: 4단계 강의 3
+
+## `CoroutineContext`와 `+`
+
+- **뜻**: 코루틴이 들고 다니는 설정 묶음. 요소로 `Job`, `CoroutineDispatcher`, `CoroutineExceptionHandler`, `CoroutineName` 등이 있다.
+- **`+`**: `SupervisorJob() + Dispatchers.IO + handler`처럼 요소를 합쳐 하나의 컨텍스트를 만든다. 같은 종류가 겹치면 오른쪽이 이긴다.
+- **`coroutineContext.job`**: 컨텍스트에서 `Job` 요소를 꺼낸다(`val CoroutineContext.job: Job`).
+- **처음 등장**: 4단계 강의 3
+
+## `CoroutineScope(...)` 만들기
+
+```kotlin
+fun CoroutineScope(context: CoroutineContext): CoroutineScope
+```
+
+- **하는 일**: 주어진 컨텍스트로 새 스코프를 만든다. 컨텍스트에 `Job`이 없으면 `Job()`을 넣어 준다.
+- **구조화된 동시성 밖**: 이렇게 만든 스코프는 `runBlocking`이나 호출한 코루틴의 **자식이 아니다.** 그래서 부모가 끝나기를 기다려 주지 않는다.
+  실험: `joinPending()`을 빼면 프로그램이 먼저 끝나 저장 C·D가 로그 없이 사라졌다. 수명은 만든 쪽이 직접 관리한다(기다리기 `join`, 끄기 `cancel`).
+- **쓰는 곳**: 화면·요청보다 오래 사는 "백그라운드 작업 담당" 객체(예: 앱 전체 수명의 기록기).
+- **처음 등장**: 4단계 강의 3
+
+## `SupervisorJob`
+
+```kotlin
+fun SupervisorJob(parent: Job? = null): CompletableJob
+```
+
+- **뜻**: 자식이 실패해도 자신과 다른 자식을 취소하지 않는 `Job`. `supervisorScope`(3단계)의 Job 버전으로, 스코프를 직접 만들 때 쓴다.
+- **실험**: `Job()`으로 바꾸면 저장 C 실패 순간 스코프 전체가 취소되어, 나중에 요청한 저장 E가 실행되지 않고 `isCancelled=true`.
+  `SupervisorJob()`이면 저장 E가 정상 실행된다.
+- **처음 등장**: 4단계 강의 3
+
+## `CoroutineExceptionHandler`
+
+```kotlin
+inline fun CoroutineExceptionHandler(crossinline handler: (CoroutineContext, Throwable) -> Unit): CoroutineExceptionHandler
+```
+
+- **뜻**: 아무도 받아 주지 않은 예외(uncaught)를 마지막으로 받는 컨텍스트 요소.
+- **언제 불리나**: **루트 코루틴**을 `launch`로 띄웠을 때 그 안에서 난 예외. `SupervisorJob` 바로 아래 자식은 루트처럼 취급된다.
+  `async`의 예외는 `Deferred`에 보관되어 `await()`로 받으므로 핸들러로 가지 않는다(그래서 3단계에서는 쓰지 않음).
+- **실행 스레드**: 예외가 난 스레드에서 불린다(로그: `DefaultDispatcher-worker-1 @coroutine#7`).
+- **한계**: 예외를 "기록"할 뿐 코루틴을 되살리지 않는다. 그 코루틴은 이미 실패로 끝났다.
+- **없으면**: 스레드의 기본 예외 처리기로 가서 `Exception in thread "DefaultDispatcher-worker-2 @coroutine#7" ...` 스택 트레이스가 출력된다(프로그램은 계속).
+- **처음 등장**: 4단계 강의 3
