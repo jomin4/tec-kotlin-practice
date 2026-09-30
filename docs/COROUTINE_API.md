@@ -29,6 +29,7 @@
 | [`await()`의 예외 규칙](#await의-예외-규칙) | 동작 규칙 | 3단계 강의 3 |
 | [`sealed interface`, `filterIsInstance`](#sealed-interface-filterisinstance) | Kotlin 문법 | 3단계 강의 3 |
 | [`launch`](#launch) / [`Job`, `cancel()`](#job-cancel) | 코루틴 빌더 / 타입 | 4단계 강의 1 |
+| [블로킹 함수](#블로킹-함수) | 개념 | 4단계 강의 2 |
 
 용어
 - **코루틴 빌더**: 새 코루틴을 만들어 시작시키는 함수(`runBlocking`, `launch`, `async`). 새 디버그 번호(`@coroutine#N`)가 붙는다.
@@ -384,3 +385,13 @@ interface Job : CoroutineContext.Element {
 - **부모는 자식을 기다린다**: `runBlocking`은 블록이 끝나도 자식이 모두 끝나야 반환한다. 무한 반복하는 화면 갱신 코루틴을
   `cancel()`하지 않으면 프로그램이 끝나지 않는다(4단계 강의 1).
 - **처음 등장**: 4단계 강의 1
+
+## 블로킹 함수
+
+- **뜻**: 일이 끝날 때까지 **호출한 스레드를 붙잡고 놓지 않는** 함수. JDBC 같은 DB 드라이버, 파일 입출력, 오래된 HTTP 클라이언트 등
+  코루틴을 모르는 라이브러리가 대부분 이렇다. 이 프로젝트에서는 `Thread.sleep(800)`으로 흉내 낸다(`SearchHistoryRepository.save`).
+- **스레드는 호출한 쪽이 정한다**: 블로킹 함수는 자기가 어느 스레드에서 도는지 모른다. main이 부르면 main이, IO 스레드가 부르면 IO 스레드가 멈춘다.
+- **`suspend`를 붙여도 안 바뀐다**: `suspend fun` 안에서 `Thread.sleep`을 불러도 스레드는 그대로 붙잡힌다. `suspend`는 "멈출 수 있다"는
+  표시일 뿐 블로킹을 없애 주지 않는다(1단계 `delay` vs `Thread.sleep`). 해결은 **블로킹 호출을 다른 스레드로 옮기는 것**(`withContext(Dispatchers.IO)`).
+- **취소가 안 먹힌다**: 블로킹 중에는 suspend 지점이 없어 코루틴 취소를 확인하지 못한다(2단계 협력적 취소, 4단계 `Job()` 실험에서 저장 D가 취소되지 않고 끝까지 실행됨).
+- **처음 등장**: 4단계 강의 2

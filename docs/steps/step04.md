@@ -8,8 +8,8 @@
 
 | 강의 | 파일 | 답할 질문 | 상태 |
 |---|---|---|---|
-| 1 | `Main.kt` [수정] | 세 가지 저장 방식을 어떻게 비교하나? 화면 갱신 코루틴은 무엇을 보여주나? | 설명 완료, 이해 확인 대기 |
-| 2 | `repository/SearchHistoryRepository.kt` [신규] | 블로킹 함수는 왜 main 스레드를 멈추나? | 예정 |
+| 1 | `Main.kt` [수정] | 세 가지 저장 방식을 어떻게 비교하나? 화면 갱신 코루틴은 무엇을 보여주나? | 완료 |
+| 2 | `repository/SearchHistoryRepository.kt` [신규] | 블로킹 함수는 왜 main 스레드를 멈추나? | 설명 완료, 이해 확인 대기 |
 | 3 | `service/SearchHistoryRecorder.kt` [신규] | 블로킹을 어떻게 IO 스레드로 옮기고, 실패를 어떻게 격리하나? | 예정 |
 | 마무리 | 실행 결과, 실험 | | 예정 |
 
@@ -22,6 +22,7 @@
 | 도입 | 문제 설명 뒤 | `step04-0-1-blocking-freezes-main.json` | 블로킹 저장을 main에서 부르면 무엇이 멈추나, 목표는? |
 | 도입 | 목차 앞 | `step04-0-2-file-map.json` | 이번 단계 파일과 강의 번호는? |
 | 강의 1 | 세 저장 방식 서술 뒤 | `step04-1-1-three-ways-timeline.json` | 세 방식에서 main 스레드와 화면 갱신은 각각 어떻게 되나? |
+| 강의 2 | `Thread.sleep` 서술 뒤 | `step04-2-1-who-gets-blocked.json` | 같은 `save()`인데 왜 어떤 때는 화면이 멈추고 어떤 때는 안 멈추나? |
 
 ## 검증 결과 (Claude 실행)
 
