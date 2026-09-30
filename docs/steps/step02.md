@@ -13,7 +13,7 @@
 | 2 | `service/PriceComparisonService.kt` [수정] | 항공사별 제한 시간을 어떻게 거나? | 완료 |
 | 3 | `provider/FakeFlightProvider.kt` [수정] | 취소는 코루틴 안에 어떤 모습으로 도착하나? | 완료 |
 | 4 | `provider/HeavyParsingFlightProvider.kt` [신규] | 취소를 확인하지 않는 코드는 어떻게 되나? | 완료 |
-| 마무리 | 실행 결과 두 개 비교, 실험 | 협력하지 않는 코루틴 하나가 전체에 끼치는 영향 | 설명 완료, 반영 확인 대기 |
+| 마무리 | 실행 결과 두 개 비교, 실험 | 협력하지 않는 코루틴 하나가 전체에 끼치는 영향 | 완료, `src/` 반영 |
 
 순서를 고른 이유: 실행 흐름 순서(무대 → 제한을 거는 곳 → 취소를 받는 곳 → 취소를 무시하는 곳)대로 가면 강의 4의 문제가 앞 강의들 위에서 드러난다.
 
@@ -45,6 +45,36 @@
 - 마무리에서 고침: 4곳 모두 시간 초과면 `result.quotes.first()`가 `NoSuchElementException`으로 죽던 문제를 `firstOrNull()?.let { } ?: "없음"`으로 수정. 제한 100ms로 확인하니 `최저가 없음` 출력.
 - 삼키기 실험(강의 3): `throw e`를 빼면 티웨이가 1.7초에 "조회 완료 (30000ms)" 거짓 로그를 찍고 견적을 반환하지만, `withTimeoutOrNull` 결과는 여전히 `null`.
   삼킨 뒤 `delay(10)`을 부르면 즉시 `TimeoutCancellationException`. catch한 `e`의 실제 타입은 `TimeoutCancellationException`.
+
+## 마무리 설명 (모범 예시)
+
+사용자가 "이 방식"이라고 확정한 설명. 이후 강의도 이 형식을 따른다(`CLAUDE.md` 4-0-2).
+
+```kotlin
+val cheapest = result.quotes.firstOrNull()
+    ?.let { "${it.provider} ${"%,d".format(it.price)}원" }
+    ?: "없음"
+```
+
+**정상 경우 (search 2)**
+① `searchWithTimeout`이 약 1513ms 만에 돌려준 `SearchResult`가 `result`에 담긴다. `result.quotes`는 가격순 `[제주항공 289,000원, 대한항공 420,000원]`.
+② `firstOrNull()`이 맨 앞의 최저가 제주항공 견적을 꺼낸다. 고치기 전 `first()`와 같은 값이지만 비었을 때 예외 대신 `null`을 주므로 타입이 `FlightQuote?`가 되고, 다음 줄은 `null` 가능성을 전제로 이어진다.
+③ 값이 있으므로 `?.let { }`가 실행된다(`?.`는 왼쪽이 `null`이 아닐 때만 실행). `it`은 제주항공 견적, 마지막 식 `"제주항공 289,000원"`이 결과.
+④ `?: "없음"`의 왼쪽이 `null`이 아니므로 그 문자열이 `cheapest`에 담긴다(`?:`는 왼쪽이 `null`일 때만 오른쪽 사용).
+
+**경계 경우 (전부 시간 초과)**
+① 서비스는 `quotes = []`를 정상 결과로 돌려준다. 보여주는 방식은 `Main`의 몫이라 수정도 `Main`에서 한다.
+② `firstOrNull()` → `null`. ③ `?.let` 블록은 건너뛰고 `null`이 넘어간다. ④ `?: "없음"` → `"없음"`.
+고치기 전에는 ②의 `first()`가 `NoSuchElementException`을 던져 #1 → `runBlocking` → `main`까지 올라가 프로그램이 종료됐다.
+
+| 단계 | 정상 (search 2) | 경계 (전부 시간 초과) | 고치기 전 경계 |
+|---|---|---|---|
+| `result.quotes` | `[제주항공, 대한항공]` | `[]` | `[]` |
+| `firstOrNull()` / `first()` | 제주항공 견적 | `null` | `NoSuchElementException` → 종료 |
+| `?.let { }` | 실행 → `"제주항공 289,000원"` | 건너뜀 → `null` | - |
+| `?: "없음"` | 그대로 | `"없음"` | - |
+
+즉, "견적이 없다"는 정상 결과를 예외로 터뜨리지 않고 `"없음"`이라는 표시로 바꿔 끝까지 흘려보낸다.
 
 ## 코드 스냅샷
 

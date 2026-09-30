@@ -1,37 +1,45 @@
 package com.travel
 
-import com.travel.model.FlightQuote
 import com.travel.model.SearchRequest
 import com.travel.provider.FakeFlightProvider
+import com.travel.provider.FlightProvider
+import com.travel.provider.HeavyParsingFlightProvider
 import com.travel.service.PriceComparisonService
 import com.travel.util.initLogging
 import com.travel.util.log
 import kotlinx.coroutines.runBlocking
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.measureTimedValue
+
+private val TIMEOUT = 1_500.milliseconds
 
 fun main() {
     initLogging()
-
-    val service = PriceComparisonService(
-        providers = listOf(
-            FakeFlightProvider("대한항공", latencyMs = 1_000, price = 420_000),
-            FakeFlightProvider("아시아나", latencyMs = 800, price = 398_000),
-            FakeFlightProvider("제주항공", latencyMs = 500, price = 289_000),
-            FakeFlightProvider("진에어", latencyMs = 1_200, price = 275_000),
-            FakeFlightProvider("티웨이", latencyMs = 700, price = 301_000),
-        ),
-    )
     val request = SearchRequest(from = "ICN", to = "NRT", date = "2026-10-15")
 
     runBlocking {
-        compare("순차 조회") { service.searchSequentially(request) }
-        compare("병렬 조회") { service.searchConcurrently(request) }
+        search("취소를 확인하지 않는 파싱", request, heavyParser(cooperative = false))
+        search("취소를 확인하는 파싱", request, heavyParser(cooperative = true))
     }
 }
 
-private suspend fun compare(label: String, search: suspend () -> List<FlightQuote>) {
-    log("===== $label 시작 =====")
-    val (quotes, elapsed) = measureTimedValue { search() }
-    val cheapest = quotes.first()
-    log("===== $label 끝: ${elapsed.inWholeMilliseconds}ms / 최저가 ${cheapest.provider} ${"%,d".format(cheapest.price)}원 =====")
+private fun heavyParser(cooperative: Boolean) =
+    HeavyParsingFlightProvider("에어부산", parsingMs = 3_000, price = 260_000, cooperative = cooperative)
+
+private suspend fun search(label: String, request: SearchRequest, parser: FlightProvider) {
+    val service = PriceComparisonService(
+        providers = listOf(
+            FakeFlightProvider("대한항공", latencyMs = 1_000, price = 420_000),
+            FakeFlightProvider("제주항공", latencyMs = 500, price = 289_000),
+            FakeFlightProvider("티웨이", latencyMs = 30_000, price = 301_000),
+            parser,
+        ),
+    )
+
+    log("===== $label: 시작 (항공사별 제한 ${TIMEOUT.inWholeMilliseconds}ms) =====")
+    val (result, elapsed) = measureTimedValue { service.searchWithTimeout(request, TIMEOUT) }
+    val cheapest = result.quotes.firstOrNull()
+        ?.let { "${it.provider} ${"%,d".format(it.price)}원" }
+        ?: "없음"
+    log("===== $label: ${elapsed.inWholeMilliseconds}ms / 최저가 $cheapest / 시간 초과 ${result.timedOut} =====")
 }

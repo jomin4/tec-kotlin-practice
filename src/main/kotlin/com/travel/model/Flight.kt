@@ -10,3 +10,8 @@ data class FlightQuote(
     val provider: String,
     val price: Int,
 )
+
+data class SearchResult(
+    val quotes: List<FlightQuote>,
+    val timedOut: List<String>,
+)

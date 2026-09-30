@@ -21,7 +21,7 @@
 |---|---|---|---|
 | 0 | 진행 방식 합의, 저장소 준비 | - | 완료 |
 | 1 | API 5개 순차 호출 vs 병렬 호출 | `suspend`, `runBlocking`, `coroutineScope`, `async`/`awaitAll` | 완료 |
-| 2 | 응답이 안 오는 API | `withTimeoutOrNull`, `CancellationException`, 협력적 취소(`yield`) | 진행 중 (강의 4/4) |
+| 2 | 응답이 안 오는 API | `withTimeoutOrNull`, `CancellationException`, 협력적 취소(`yield`) | 완료 |
 | 3 | 하나가 실패하면 전체가 죽는 문제 | 예외 전파, `supervisorScope`, `CoroutineExceptionHandler` | 예정 |
 | 4 | 블로킹 라이브러리(DB 저장) 섞기 | `Dispatchers.IO`, `withContext` | 예정 |
 | 5 | 가격을 주기적으로 감시 | `Flow`, `map`/`filter`/`distinctUntilChanged` | 예정 |
@@ -49,7 +49,9 @@
 
 ### 2단계: 응답이 안 오는 API: 타임아웃과 협력적 취소
 - 강의 목차, 그림 배치, 코드 스냅샷: `docs/steps/step02.md`
-- 코드는 작업 트리에서 검증 완료. 단계 마무리 확인 후 `src/`에 커밋한다.
+- 검증 결과: search 1(양보 없음) ≈3105ms 최저가 에어부산, 시간 초과 [대한항공, 제주항공, 티웨이] / search 2(yield) ≈1513ms 최저가 제주항공, 시간 초과 [티웨이, 에어부산]
+- 마무리에서 `Main`의 빈 결과 처리(`firstOrNull`) 수정
+- 사용자 확인 후 `src/`에 반영 완료
 
 ## 결정 기록
 
