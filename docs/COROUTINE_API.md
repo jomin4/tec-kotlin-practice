@@ -33,6 +33,8 @@
 | [`withContext`](#withcontext) / [`Dispatchers.IO`](#dispatchersio) | 스코프 함수 / Dispatcher | 4단계 강의 3 |
 | [`CoroutineContext`와 `+`](#coroutinecontext와-) / [`CoroutineScope(...)`](#coroutinescope-만들기) | 타입 / 함수 | 4단계 강의 3 |
 | [`SupervisorJob`](#supervisorjob) / [`CoroutineExceptionHandler`](#coroutineexceptionhandler) | Job / 컨텍스트 요소 | 4단계 강의 3 |
+| [`Flow`, `flow { }`, `emit`, `collect`](#flow-flow--emit-collect) | 타입 / 빌더 / 종단 연산자 | 5단계 |
+| [Flow 중간 연산자](#flow-중간-연산자) | `onEach`·`map`·`filter`·`distinctUntilChanged`·`take`·`onCompletion` | 5단계 |
 
 용어
 - **코루틴 빌더**: 새 코루틴을 만들어 시작시키는 함수(`runBlocking`, `launch`, `async`). 새 디버그 번호(`@coroutine#N`)가 붙는다.
@@ -464,3 +466,34 @@ inline fun CoroutineExceptionHandler(crossinline handler: (CoroutineContext, Thr
 - **한계**: 예외를 "기록"할 뿐 코루틴을 되살리지 않는다. 그 코루틴은 이미 실패로 끝났다.
 - **없으면**: 스레드의 기본 예외 처리기로 가서 `Exception in thread "DefaultDispatcher-worker-2 @coroutine#7" ...` 스택 트레이스가 출력된다(프로그램은 계속).
 - **처음 등장**: 4단계 강의 3
+
+## `Flow`, `flow { }`, `emit`, `collect`
+
+```kotlin
+interface Flow<out T> { suspend fun collect(collector: FlowCollector<T>) }
+fun <T> flow(block: suspend FlowCollector<T>.() -> Unit): Flow<T>
+suspend fun emit(value: T)            // FlowCollector<T>
+suspend fun Flow<T>.collect(action: suspend (T) -> Unit)
+```
+
+- **뜻**: 시간에 따라 값을 **여러 번** 내보내는 비동기 흐름. `suspend fun`이 값 하나를 돌려준다면 `Flow`는 값 여러 개를 차례로 내보낸다.
+- **차가운 흐름(cold)**: `flow { }`는 흐름을 **정의만** 한다. `collect`를 부를 때마다 블록이 처음부터 실행된다. 5단계 실행에서 흐름을 만든 뒤에도
+  `collect` 전까지 조회가 한 번도 일어나지 않았다.
+- **`emit`**: 값을 하나 내보낸다. 내보낸 값이 아래 연산자와 `collect` 블록까지 처리될 때까지 suspend한다(한 번에 한 값씩 흐른다).
+- **`collect`**: 흐름을 실제로 돌리는 **종단 연산자**. suspend 함수라서 흐름이 끝날 때까지 기다린다. 새 코루틴을 만들지 않고, 부른 코루틴 안에서 블록이 실행된다
+  (5단계 로그가 모두 `main @coroutine#1`).
+- **처음 등장**: 5단계 `PriceWatcher.watch`, `Main`
+
+## Flow 중간 연산자
+
+| 연산자 | 하는 일 | 5단계에서 |
+|---|---|---|
+| `onEach { }` | 값을 그대로 흘려보내면서 곁가지 작업(로그) | `가격 확인` 로그 |
+| `map { }` | 값을 바꿈 | `FlightQuote` → 가격 `Int` |
+| `distinctUntilChanged()` | 직전 값과 같으면 버림 | 289,000 중복 제거 |
+| `filter { }` | 조건에 맞는 값만 통과 | 280,000원 이하만 |
+| `take(n)` | n개를 받으면 흐름을 끝냄. 위쪽 흐름은 취소된다 | 알림 2번 뒤 `while (true)` 루프까지 멈춤 |
+| `onCompletion { }` | 흐름이 끝날 때(정상·취소·예외) 한 번 실행 | `감시 종료` 로그 |
+
+- 중간 연산자는 새 `Flow`를 돌려줄 뿐 아무것도 실행하지 않는다. 실행은 `collect` 때 한꺼번에 일어난다.
+- **처음 등장**: 5단계

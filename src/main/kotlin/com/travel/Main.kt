@@ -1,60 +1,46 @@
 package com.travel
 
 import com.travel.model.SearchRequest
-import com.travel.provider.FakeFlightProvider
-import com.travel.provider.FlakyFlightProvider
-import com.travel.repository.SearchHistoryRepository
-import com.travel.service.PriceComparisonService
-import com.travel.service.SearchHistoryRecorder
+import com.travel.provider.ScriptedFlightProvider
+import com.travel.service.PriceWatcher
 import com.travel.util.initLogging
 import com.travel.util.log
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onCompletion
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.runBlocking
 import kotlin.time.Duration.Companion.milliseconds
 
-private val TIMEOUT = 1_500.milliseconds
+private const val TARGET_PRICE = 280_000
 
 fun main() {
     initLogging()
     val request = SearchRequest(from = "ICN", to = "NRT", date = "2026-10-15")
-    val service = PriceComparisonService(
-        providers = listOf(
-            FakeFlightProvider("대한항공", latencyMs = 1_000, price = 420_000),
-            FakeFlightProvider("제주항공", latencyMs = 500, price = 289_000),
-            FakeFlightProvider("티웨이", latencyMs = 30_000, price = 301_000),
-            FlakyFlightProvider("진에어", failAfterMs = 300),
+    val watcher = PriceWatcher(
+        provider = ScriptedFlightProvider(
+            name = "제주항공",
+            latencyMs = 100,
+            prices = listOf(289_000, 289_000, 279_000, 279_000, 285_000, 265_000, 265_000),
         ),
+        interval = 300.milliseconds,
     )
-    val repository = SearchHistoryRepository(brokenLabels = setOf("저장 C"))
-    val recorder = SearchHistoryRecorder(repository)
 
     runBlocking {
-        val result = service.searchResilient(request, TIMEOUT)
-        log("===== 조회 끝: 최저가 ${result.quotes.firstOrNull()?.provider ?: "없음"} =====")
+        val alerts = watcher.watch(request)
+            .onEach { log("가격 확인: ${"%,d".format(it.price)}원") }
+            .map { it.price }
+            .distinctUntilChanged()
+            .onEach { log("가격 변동 감지: ${"%,d".format(it)}원") }
+            .filter { it <= TARGET_PRICE }
+            .take(2)
+            .onCompletion { log("감시 종료") }
 
-        val screen = launch {
-            var frame = 0
-            while (true) {
-                log("화면 갱신 ${++frame}")
-                delay(200)
-            }
+        log("===== 흐름을 만들었지만 아직 아무 일도 일어나지 않음 =====")
+        alerts.collect { price ->
+            log("===== 알림: 목표가 ${"%,d".format(TARGET_PRICE)}원 이하 → ${"%,d".format(price)}원 =====")
         }
-        delay(300)
-
-        log("===== 1) main 스레드에서 직접 저장 =====")
-        repository.save("저장 A", result)
-
-        log("===== 2) withContext(Dispatchers.IO)로 저장 =====")
-        recorder.save("저장 B", result)
-
-        log("===== 3) launch로 맡기고 바로 다음 일 =====")
-        recorder.saveInBackground("저장 C", result)
-        recorder.saveInBackground("저장 D", result)
-        log("저장을 맡겼으니 바로 다음 작업 진행")
-
-        recorder.joinPending()
-        log("===== 백그라운드 저장 모두 끝 =====")
-        screen.cancel()
     }
 }
