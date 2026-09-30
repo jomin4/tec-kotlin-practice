@@ -35,6 +35,7 @@
 | [`SupervisorJob`](#supervisorjob) / [`CoroutineExceptionHandler`](#coroutineexceptionhandler) | Job / 컨텍스트 요소 | 4단계 강의 3 |
 | [`Flow`, `flow { }`, `emit`, `collect`](#flow-flow--emit-collect) | 타입 / 빌더 / 종단 연산자 | 5단계 |
 | [Flow 중간 연산자](#flow-중간-연산자) | `onEach`·`map`·`filter`·`distinctUntilChanged`·`take`·`onCompletion` | 5단계 |
+| [`combine`](#combine) / [`StateFlow`, `stateIn`](#stateflow-statein) | Flow 연산자 / 뜨거운 흐름 | 6단계 |
 
 용어
 - **코루틴 빌더**: 새 코루틴을 만들어 시작시키는 함수(`runBlocking`, `launch`, `async`). 새 디버그 번호(`@coroutine#N`)가 붙는다.
@@ -497,3 +498,31 @@ suspend fun Flow<T>.collect(action: suspend (T) -> Unit)
 
 - 중간 연산자는 새 `Flow`를 돌려줄 뿐 아무것도 실행하지 않는다. 실행은 `collect` 때 한꺼번에 일어난다.
 - **처음 등장**: 5단계
+
+## `combine`
+
+```kotlin
+inline fun <reified T, R> combine(vararg flows: Flow<T>, crossinline transform: suspend (Array<T>) -> R): Flow<R>
+inline fun <reified T, R> combine(flows: Iterable<Flow<T>>, crossinline transform: suspend (Array<T>) -> R): Flow<R>
+```
+
+- **하는 일**: 여러 흐름의 **각자 가장 최근 값**을 모아 `transform`으로 하나의 값을 만든다. 어느 흐름이든 새 값을 내면 다시 계산해 내보낸다.
+- **첫 값**: 모든 흐름이 **최소 한 번씩** 값을 내야 첫 결과를 낸다.
+- **6단계에서**: 세 항공사 흐름의 최신 견적 배열 → `minBy { it.price }` → 현재 최저가 견적.
+- **처음 등장**: 6단계 `LowestPriceTracker`
+
+## `StateFlow`, `stateIn`
+
+```kotlin
+interface StateFlow<out T> : SharedFlow<T> { val value: T }
+fun <T> Flow<T>.stateIn(scope: CoroutineScope, started: SharingStarted, initialValue: T): StateFlow<T>
+```
+
+- **`StateFlow`**: **항상 값을 하나 들고 있는** 뜨거운 흐름. `value`로 아무 때나 최신 값을 바로 읽고, `collect`하면 현재 값부터 바뀔 때마다 받는다.
+  **같은 값(equals)이면 다시 내보내지 않는다.** 6단계에서 최저가가 그대로인 갱신은 화면에 가지 않았다.
+- **차가운 흐름과의 차이**: `flow { }`는 `collect`할 때마다 처음부터 실행된다. `StateFlow`는 모으는 사람이 없어도 이미 돌고 있고, 여러 곳에서 모아도 원천은 하나다.
+- **`stateIn`**: 차가운 흐름을 `StateFlow`로 바꾼다. `scope`에 공유용 코루틴을 띄워 원천 흐름을 모은다. 이 코루틴은 스코프가 끝날 때까지 계속 돈다
+  (6단계에서 `trackerScope.cancel()`로 종료).
+- **`SharingStarted`**: `Eagerly`(바로 시작), `Lazily`(첫 구독자가 생기면 시작), `WhileSubscribed()`(구독자가 있을 때만).
+- **주의**: `take(n)`으로 받을 때 `StateFlow`는 같은 값을 건너뛰므로 n개가 영영 안 올 수 있다(6단계 `take(5)`로 멈춘 경험).
+- **처음 등장**: 6단계
