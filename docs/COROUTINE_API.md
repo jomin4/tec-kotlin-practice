@@ -36,6 +36,7 @@
 | [`Flow`, `flow { }`, `emit`, `collect`](#flow-flow--emit-collect) | 타입 / 빌더 / 종단 연산자 | 5단계 |
 | [Flow 중간 연산자](#flow-중간-연산자) | `onEach`·`map`·`filter`·`distinctUntilChanged`·`take`·`onCompletion` | 5단계 |
 | [`combine`](#combine) / [`StateFlow`, `stateIn`](#stateflow-statein) | Flow 연산자 / 뜨거운 흐름 | 6단계 |
+| [`Semaphore`, `withPermit`](#semaphore-withpermit) / [`Channel`](#channel) / [`joinAll`](#joinall) | 동기화 / 코루틴 간 통신 | 7단계 |
 
 용어
 - **코루틴 빌더**: 새 코루틴을 만들어 시작시키는 함수(`runBlocking`, `launch`, `async`). 새 디버그 번호(`@coroutine#N`)가 붙는다.
@@ -526,3 +527,42 @@ fun <T> Flow<T>.stateIn(scope: CoroutineScope, started: SharingStarted, initialV
 - **`SharingStarted`**: `Eagerly`(바로 시작), `Lazily`(첫 구독자가 생기면 시작), `WhileSubscribed()`(구독자가 있을 때만).
 - **주의**: `take(n)`으로 받을 때 `StateFlow`는 같은 값을 건너뛰므로 n개가 영영 안 올 수 있다(6단계 `take(5)`로 멈춘 경험).
 - **처음 등장**: 6단계
+
+## `Semaphore`, `withPermit`
+
+```kotlin
+fun Semaphore(permits: Int, acquiredPermits: Int = 0): Semaphore
+suspend inline fun <T> Semaphore.withPermit(action: () -> T): T
+```
+
+- **뜻**: 허가증 `permits`장을 가진 문지기. `withPermit { }`은 허가증을 한 장 받고 블록을 실행한 뒤 **반드시** 돌려준다(예외가 나도).
+- **허가증이 없으면**: 누가 돌려줄 때까지 **suspend**한다(스레드를 막지 않음). 그래서 동시에 블록 안에 있는 코루틴은 최대 `permits`개다.
+- **7단계에서**: `Semaphore(2)`로 항공사 API에 동시에 2건만 보내 6건 모두 성공(2건씩 세 차례).
+- **`Mutex`와의 관계**: `Mutex`는 허가증이 1장인 경우(한 번에 하나만)와 같다.
+- **처음 등장**: 7단계 `RateLimitedFlightProvider`
+
+## `Channel`
+
+```kotlin
+fun <E> Channel(capacity: Int = RENDEZVOUS, ...): Channel<E>
+suspend fun send(element: E)          // SendChannel
+suspend fun receive(): E              // ReceiveChannel, for (x in channel) 로도 받는다
+fun close(): Boolean
+```
+
+- **뜻**: 코루틴끼리 값을 주고받는 **대기열(파이프)**. 한쪽은 `send`, 다른 쪽은 `receive`(또는 `for` 루프)로 받는다. 한 값은 **한 수신자만** 받는다.
+- **용량과 역압**: `capacity`만큼 쌓아 둘 수 있다. 가득 차면 `send`가 **suspend**해서 보내는 쪽이 저절로 속도를 맞춘다.
+  `RENDEZVOUS`(0)는 받는 쪽이 올 때까지 기다리고, `UNLIMITED`는 제한 없이 쌓는다.
+- **`close()`**: 더 보낼 게 없다는 표시. 수신 쪽 `for` 루프는 남은 값을 다 받은 뒤 끝난다.
+- **작업자 패턴(fan-out)**: 같은 채널을 여러 코루틴이 `for`로 받으면, 먼저 비는 작업자가 다음 값을 가져가 일을 나눈다(7단계: 작업자 3명이 7건).
+- **Flow와의 차이**: `Flow`는 모을 때마다 처음부터 도는 흐름이고, `Channel`은 이미 돌고 있는 코루틴 사이의 전달 통로다(값은 한 번만 소비됨).
+- **처음 등장**: 7단계 `SearchQueue`
+
+## `joinAll`
+
+```kotlin
+suspend fun Collection<Job>.joinAll()
+```
+
+- 여러 `Job`이 모두 끝날 때까지 suspend한다. 결과값이 필요 없는 `launch` 작업들을 기다릴 때 쓴다(`awaitAll`의 `Job` 버전).
+- **처음 등장**: 7단계 `SearchQueue`

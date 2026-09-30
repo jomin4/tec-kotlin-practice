@@ -26,7 +26,7 @@
 | 4 | 블로킹 라이브러리(DB 저장) 섞기 | `Dispatchers.IO`, `withContext`, `launch`, `CoroutineExceptionHandler` | 완료 |
 | 5 | 가격을 주기적으로 감시 | `Flow`, `flow { }`, `collect`, `map`/`filter`/`distinctUntilChanged`/`take` | 완료 |
 | 6 | 여러 가격 흐름을 합쳐 현재 최저가 유지 | `combine`, `StateFlow`, `stateIn` | 완료 |
-| 7 | 요청이 몰리면 API가 차단 | `Semaphore`, `Channel` | 예정 |
+| 7 | 요청이 몰리면 API가 차단 | `Semaphore`, `Channel`, 작업자 패턴 | 완료 |
 | 8 | 시간이 걸리는 코드를 빠르게 테스트 | `runTest`, 가상 시간 | 예정 |
 
 로드맵은 진행하면서 조정할 수 있다.
@@ -71,6 +71,11 @@
 ### 6단계: 여러 가격 흐름을 합쳐 현재 최저가 유지 (combine, StateFlow)
 - 목차, 검증 결과, 코드 스냅샷: `docs/steps/step06.md`
 - 검증 결과: 최저가 변화 4번(제주 289,000 → 티웨이 270,000 → 제주 275,000 → 대한 260,000), `value`로 1초 시점 최저가(티웨이) 조회
+- 사용자 요청으로 강의 없이 구현 먼저 완료, `src/` 반영
+
+### 7단계: 요청이 몰리면 API가 차단 (Semaphore, Channel)
+- 목차, 검증 결과, 코드 스냅샷: `docs/steps/step07.md`
+- 검증 결과: 제한 없음 6건 중 4건 실패 / `Semaphore(2)` 6건 모두 성공(최대 동시 2건) / `Channel` + 작업자 3명 7건 약 933ms
 - 사용자 요청으로 강의 없이 구현 먼저 완료, `src/` 반영
 
 ## 결정 기록
