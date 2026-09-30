@@ -4,9 +4,9 @@
 
 ## 현재 상태
 
-- **단계**: 2 (응답이 안 오는 API: 타임아웃과 협력적 취소)
-- **강의**: 2단계 마무리 글 설명 완료 → 반영 확인 대기 (목차: `docs/steps/step02.md`)
-- **다음 할 일**: 사용자가 확인하면 2단계 코드를 `src/`에 커밋하고 3단계 도입 글 + 강의 1 시작
+- **단계**: 3 (하나가 실패하면 전체가 죽는 문제: 예외 전파와 supervisorScope)
+- **강의**: 강의 1 `Main.kt` 설명 완료 → 이해 확인 대기 (목차: `docs/steps/step03.md`)
+- **다음 할 일**: 사용자가 "다음"이라고 하면 강의 2 `FlakyFlightProvider.kt`
 
 ## 프로젝트 개요
 
@@ -22,8 +22,8 @@
 | 0 | 진행 방식 합의, 저장소 준비 | - | 완료 |
 | 1 | API 5개 순차 호출 vs 병렬 호출 | `suspend`, `runBlocking`, `coroutineScope`, `async`/`awaitAll` | 완료 |
 | 2 | 응답이 안 오는 API | `withTimeoutOrNull`, `CancellationException`, 협력적 취소(`yield`) | 완료 |
-| 3 | 하나가 실패하면 전체가 죽는 문제 | 예외 전파, `supervisorScope`, `CoroutineExceptionHandler` | 예정 |
-| 4 | 블로킹 라이브러리(DB 저장) 섞기 | `Dispatchers.IO`, `withContext` | 예정 |
+| 3 | 하나가 실패하면 전체가 죽는 문제 | 예외 전파, `supervisorScope`, `await` 예외 처리 | 진행 중 (강의 1/3) |
+| 4 | 블로킹 라이브러리(DB 저장) 섞기 | `Dispatchers.IO`, `withContext`, `launch`, `CoroutineExceptionHandler` | 예정 |
 | 5 | 가격을 주기적으로 감시 | `Flow`, `map`/`filter`/`distinctUntilChanged` | 예정 |
 | 6 | 여러 가격 흐름을 합쳐 현재 최저가 유지 | `combine`, `StateFlow` | 예정 |
 | 7 | 요청이 몰리면 API가 차단 | `Semaphore`, `Channel` | 예정 |
@@ -53,6 +53,10 @@
 - 마무리에서 `Main`의 빈 결과 처리(`firstOrNull`) 수정
 - 사용자 확인 후 `src/`에 반영 완료
 
+### 3단계: 하나가 실패하면 전체가 죽는 문제
+- 강의 목차, 그림 배치, 코드 스냅샷, 실험 결과: `docs/steps/step03.md`
+- 코드는 작업 트리에서 검증 완료. 단계 마무리 확인 후 `src/`에 커밋한다.
+
 ## 결정 기록
 
 - 사용자는 코드 이해에 집중하고, 환경 설정과 Git은 Claude가 전담한다.
@@ -67,3 +71,4 @@
 - 설명 깊이: 코루틴 API와 관련 Kotlin 문법은 문법 카드로 철저히 설명하고 `docs/COROUTINE_API.md`에 누적한다 (`CLAUDE.md` 4-1).
 - 설명 방식: 값 추적 흐름 서술(실제 값·타입·코루틴 상태·시간을 따라 한 동작씩)과 값 추적 표 (`CLAUDE.md` 4-0).
 - 속도 조절: 핵심 코드만 깊게 설명하고 연결부·보일러플레이트는 짧게 넘긴다 (`CLAUDE.md` 4-0-3, 2026-09-30).
+- 로드맵 조정: `CoroutineExceptionHandler`는 `launch`와 함께 4단계에서 다룬다(`async` 예외는 `await`로 받으므로 3단계에는 맞지 않음) (2026-09-30).
